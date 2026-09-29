@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.spec
+*.log
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite3
+user-settings.json

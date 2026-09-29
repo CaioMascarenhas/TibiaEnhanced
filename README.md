@@ -1,0 +1,32 @@
+# Tibia Enhanced
+
+Aplicativo desktop em Python para espelhar regiões visíveis da janela do Tibia e gerenciar alertas de áudio iniciados pelo jogador.
+
+## Escopo inicial
+
+- Selecionar regiões da janela do jogo e exibi-las em janelas flutuantes, móveis e redimensionáveis.
+- Criar temporizadores com nome, duração e som personalizado (`.wav` ou `.mp3`).
+- Iniciar, pausar e reiniciar temporizadores pelo aplicativo; atalhos configuráveis podem controlar apenas o aplicativo.
+- Salvar localmente os recortes, alertas e posições das janelas.
+
+## Limites do aplicativo
+
+O aplicativo captura apenas a imagem exibida pelo sistema operacional. Ele não lê memória ou tráfego do cliente, não injeta código, não envia comandos ao Tibia e não executa ações do jogo automaticamente. A conformidade deve ser reavaliada conforme as regras oficiais da CipSoft antes da distribuição.
+
+## Arquitetura proposta
+
+- **Interface:** Python e PySide6.
+- **Captura:** protótipo com MSS; avaliar `Windows.Graphics.Capture` para a versão distribuível.
+- **Recortes:** uma captura da janela, compartilhada entre vários espelhos.
+- **Alertas:** relógio monotônico e reprodução local de arquivos de áudio.
+- **Configurações:** arquivo local versionado por esquema, com migração quando necessário.
+
+O plano de trabalho e os critérios de aceite estão em [docs/roadmap.md](docs/roadmap.md). As propostas de issues estão em [docs/issue-drafts](docs/issue-drafts).
+
+## Referências
+
+- [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)
+- [Regra 3b do Tibia](https://www.tibia.com/support/?rule=3b&subtopic=tibiarules)
+- [Captura de tela no Windows](https://learn.microsoft.com/en-us/windows/uwp/audio-video-camera/screen-capture)
+
+Este projeto é independente e não é afiliado à CipSoft.
