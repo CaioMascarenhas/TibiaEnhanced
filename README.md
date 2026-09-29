@@ -23,6 +23,26 @@ O aplicativo captura apenas a imagem exibida pelo sistema operacional. Ele não 
 
 O plano de trabalho e os critérios de aceite estão em [docs/roadmap.md](docs/roadmap.md). As propostas de issues estão em [docs/issue-drafts](docs/issue-drafts).
 
+## Executar a base do aplicativo
+
+Requer Windows e Python 3.11 ou superior. No PowerShell, dentro da pasta do projeto:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m tibiaenhanced
+```
+
+O aplicativo também instala o comando `tibiaenhanced`. A janela inicial contém as seções **Recortes** e **Alertas**. Nesta primeira issue, elas apresentam o escopo das próximas etapas; a captura do jogo e a reprodução de áudio ainda serão implementadas.
+
+Para executar os testes de estrutura e responsividade:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Quando a bandeja do sistema está disponível, fechar a janela a oculta; o menu do ícone oferece **Mostrar**, **Ocultar** e **Sair**. Sem bandeja, fechar a janela encerra o aplicativo.
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)
