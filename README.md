@@ -16,7 +16,7 @@ O aplicativo captura apenas a imagem exibida pelo sistema operacional. Ele não 
 ## Arquitetura proposta
 
 - **Interface:** Python e PySide6.
-- **Captura:** protótipo com MSS; avaliar `Windows.Graphics.Capture` para a versão distribuível.
+- **Espelhamento:** miniaturas DWM do Windows, registradas e recortadas por Python; resultados dos testes em [docs/capture-spike.md](docs/capture-spike.md).
 - **Recortes:** uma captura da janela, compartilhada entre vários espelhos.
 - **Alertas:** relógio monotônico e reprodução local de arquivos de áudio.
 - **Configurações:** arquivo local versionado por esquema, com migração quando necessário.
@@ -33,7 +33,9 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m tibiaenhanced
 ```
 
-O aplicativo também instala o comando `tibiaenhanced`. A janela inicial contém as seções **Recortes** e **Alertas**. Nesta primeira issue, elas apresentam o escopo das próximas etapas; a captura do jogo e a reprodução de áudio ainda serão implementadas.
+O aplicativo também instala o comando `tibiaenhanced`. Na aba **Recortes**, escolha a janela do Tibia, clique em **Selecionar região**, arraste um retângulo na imagem e clique em **Iniciar prévia**. A aba **Alertas** será implementada na issue #4.
+
+MSS, Windows Graphics Capture e DXGI retornaram preto para a área do jogo neste cliente. O espelho DWM é exibido diretamente pelo compositor em uma janela do aplicativo; ele não fornece quadros em memória para análise de imagem. Consulte [o relatório técnico](docs/capture-spike.md) para os resultados e limitações dos testes.
 
 Para executar os testes de estrutura e responsividade:
 

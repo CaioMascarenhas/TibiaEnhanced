@@ -1,14 +1,13 @@
 """Execução de captura fora da thread da interface.
 
-A implementação da fonte de quadros será adicionada na issue #2. A fonte deve
-retornar de ``grab_frame`` periodicamente para permitir uma parada rápida.
+A fonte deve retornar de ``grab_frame`` periodicamente para permitir uma parada rápida.
 """
 
 from collections.abc import Callable
 from typing import Protocol
 from threading import Event
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QCoreApplication, QObject, QThread, Qt, Signal, Slot
 
 
 class FrameSource(Protocol):
@@ -75,7 +74,7 @@ class CaptureService(QObject):
         self._thread.started.connect(self._worker.run)
         self._worker.frame_ready.connect(self.frame_ready)
         self._worker.failed.connect(self.failed)
-        self._worker.finished.connect(self._thread.quit)
+        self._worker.finished.connect(self._thread.quit, Qt.ConnectionType.DirectConnection)
         self._worker.finished.connect(self._worker.deleteLater)
         self._thread.finished.connect(self._on_thread_finished)
         self._thread.finished.connect(self._thread.deleteLater)
@@ -84,6 +83,16 @@ class CaptureService(QObject):
     def stop(self) -> None:
         if self._stop_event is not None:
             self._stop_event.set()
+
+    def shutdown(self, timeout_ms: int = 3000) -> bool:
+        """Para a captura antes de encerrar a aplicação."""
+        self.stop()
+        thread = self._thread
+        if thread is None:
+            return True
+        done = thread.wait(timeout_ms)
+        QCoreApplication.processEvents()
+        return done
 
     @Slot()
     def _on_thread_finished(self) -> None:

@@ -1,6 +1,5 @@
 """Janela de controle e comandos da bandeja do sistema."""
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -14,6 +13,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .capture_panel import CapturePanel
+
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
@@ -24,13 +25,8 @@ class MainWindow(QMainWindow):
         self.resize(760, 500)
 
         tabs = QTabWidget()
-        tabs.addTab(
-            self._placeholder(
-                "Recortes",
-                "Seleção e espelhamento de regiões serão implementados nas issues #2 e #3.",
-            ),
-            "Recortes",
-        )
+        self.capture_panel = CapturePanel()
+        tabs.addTab(self.capture_panel, "Recortes")
         tabs.addTab(
             self._placeholder(
                 "Alertas",
@@ -92,6 +88,9 @@ class MainWindow(QMainWindow):
             self.show_window()
 
     def exit_app(self) -> None:
+        if not self.capture_panel.shutdown():
+            self.statusBar().showMessage("A captura ainda está encerrando. Tente sair novamente.")
+            return
         self._exiting = True
         if self._tray is not None:
             self._tray.hide()
@@ -103,4 +102,5 @@ class MainWindow(QMainWindow):
             self.hide()
             event.ignore()
         else:
+            self.capture_panel.shutdown()
             event.accept()
