@@ -48,6 +48,27 @@ QFrame#card {
     border: 1px solid #34485b;
     border-radius: 11px;
 }
+QFrame#timerCard {
+    background: #1b2937;
+    border: 1px solid #34485b;
+    border-left: 3px solid #f08225;
+    border-radius: 10px;
+}
+QLabel#timerArt {
+    background: #152536;
+    border: 1px solid #34485b;
+    border-radius: 8px;
+}
+QLabel#timerTitle {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+QLabel#timerCountdown {
+    color: #f6be72;
+    font-size: 26px;
+    font-weight: 700;
+}
 QScrollArea#detailsScroll {
     background: #111a24;
     border: 0;
@@ -91,7 +112,7 @@ QPushButton#primaryButton:disabled {
 }
 QPushButton#dangerButton { color: #ffd8d8; border-color: #744851; }
 QPushButton#dangerButton:hover { background: #6c3541; }
-QComboBox, QLineEdit {
+QComboBox, QLineEdit, QKeySequenceEdit {
     color: #f1f5f9;
     background: #13202c;
     border: 1px solid #43576b;
@@ -100,7 +121,8 @@ QComboBox, QLineEdit {
     min-height: 22px;
     selection-background-color: #376985;
 }
-QComboBox:hover, QLineEdit:focus { border-color: #d5ac64; }
+QComboBox:hover, QLineEdit:focus, QKeySequenceEdit:focus { border-color: #d5ac64; }
+QCheckBox { color: #e8f0f7; spacing: 7px; }
 QComboBox:disabled, QLineEdit:disabled { color: #748596; }
 QComboBox::drop-down { border: 0; width: 24px; }
 QComboBox QAbstractItemView {
