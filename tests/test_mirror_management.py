@@ -7,7 +7,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QObject, Signal  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QPushButton, QSlider  # noqa: E402
 
 from tibiaenhanced.models import Region  # noqa: E402
 from tibiaenhanced.ui.capture_panel import CapturePanel, MirrorEntry  # noqa: E402
@@ -59,28 +59,24 @@ class MirrorManagementTests(unittest.TestCase):
             1: MirrorEntry(1, 42, "Tibia", Region("HP", 0, 0, 100, 40), first_window),
             2: MirrorEntry(2, 42, "Tibia", Region("Mana", 120, 0, 100, 40), second_window),
         }
-        panel._refresh_tree(1)
+        panel._refresh_cards(1)
         panel._show_entry(panel._entries[1])
         panel._show_entry(panel._entries[2])
         self.assertTrue(first_window.active)
         self.assertTrue(second_window.active)
 
-        root = panel.mirror_tree.topLevelItem(0)
-        self.assertEqual(root.text(0), "Tibia")
-        self.assertEqual(root.childCount(), 2)
-        panel.mirror_tree.setCurrentItem(root.child(0))
-        panel.toggle_lock()
+        self.assertEqual(set(panel._cards), {1, 2})
+        panel._cards[1].findChildren(QPushButton)[2].click()
         self.assertTrue(first_window.locked)
         self.assertFalse(second_window.locked)
-        panel.transparency_slider.setValue(45)
+        panel._cards[1].findChild(QSlider).setValue(55)
         self.assertEqual(first_window.opacity_percent, 55)
         self.assertEqual(second_window.opacity_percent, 100)
-        panel.toggle_visibility()
+        panel._cards[1].findChildren(QPushButton)[1].click()
         self.assertFalse(first_window.active)
         self.assertTrue(second_window.active)
 
-        panel.mirror_tree.setCurrentItem(panel.mirror_tree.topLevelItem(0).child(1))
-        panel.delete_current()
+        panel._cards[2].findChildren(QPushButton)[3].click()
         self.assertFalse(second_window.active)
         self.assertEqual([entry.region.name for entry in panel.entries], ["HP"])
         panel.shutdown()

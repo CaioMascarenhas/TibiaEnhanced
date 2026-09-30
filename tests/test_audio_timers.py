@@ -86,6 +86,22 @@ class AudioPanelTests(unittest.TestCase):
         self.assertGreater(card.timer.remaining(), 0)
         panel.close()
 
+    def test_small_window_scrolls_cards_without_overlap(self) -> None:
+        panel = AudioPanel()
+        panel.resize(540, 260)
+        panel.show()
+        self.app.processEvents()
+        first, second = panel.cards
+        self.assertGreater(second.y(), first.y() + first.height())
+        self.assertGreaterEqual(panel.card_layout.parentWidget().minimumHeight(),
+                                second.y() + second.height())
+        first.start_button.click()
+        self.assertTrue(first.timer.running)
+        self.assertFalse(second.timer.running)
+        first.loop_check.click()
+        self.assertTrue(first.timer.loop)
+        panel.close()
+
 
 if __name__ == "__main__":
     unittest.main()

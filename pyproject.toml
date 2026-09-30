@@ -20,4 +20,4 @@ tibiaenhanced = "tibiaenhanced.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-tibiaenhanced = ["audios/*.mp3", "audios/*.wav", "imgs/**/*.png", "imgs/*.png"]
+tibiaenhanced = ["audios/*.mp3", "audios/*.wav", "imgs/**/*.png", "imgs/*.png", "fonts/*.ttf", "fonts/*.txt", "icons/*.svg", "icons/LICENSE"]

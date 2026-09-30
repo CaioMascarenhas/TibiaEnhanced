@@ -5,9 +5,11 @@ import time
 from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QCloseEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPen
+from PySide6.QtGui import QColor, QCloseEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion
 from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QLabel, QLineEdit,
-                               QMessageBox, QWidget)
+                               QMessageBox, QPushButton, QWidget)
+
+from .design import icon
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
@@ -81,7 +83,9 @@ class DwmRegionDialog(QDialog):
                  suggested_name: str = "Recorte 1",
                  source_title: str = "Janela selecionada") -> None:
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint |
+                            Qt.WindowType.WindowStaysOnTopHint)
+        self._drag_origin: QPoint | None = None
         self._hwnd = hwnd
         self._mirror: DwmMirror | None = None
         self._overlay: _SelectionOverlay | None = None
@@ -97,9 +101,22 @@ class DwmRegionDialog(QDialog):
         self._display = QRect(12, 46, max(100, round(area.width * scale)),
                               max(80, round(area.height * scale)))
         self.setWindowTitle("Novo recorte")
+        self.setObjectName("dwmRegionDialog")
         self.setFixedSize(self._display.width() + 24, self._display.bottom() + 152)
+        outline = QPainterPath()
+        outline.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 12, 12)
+        self.setMask(QRegion(outline.toFillPolygon().toPolygon()))
+        self.setStyleSheet("QDialog#dwmRegionDialog { background: #292c40; color: #f1f3f8; }")
         heading = QLabel("Arraste na imagem para marcar a área do novo espelho.", self)
-        heading.setGeometry(12, 4, self.width() - 24, 20)
+        heading.setGeometry(12, 4, self.width() - 58, 20)
+        heading.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        close = QPushButton(self)
+        close.setObjectName("iconButton")
+        close.setGeometry(self.width() - 35, 5, 25, 25)
+        close.setIcon(icon("x", "#e9edf6", 15))
+        close.setToolTip("Fechar")
+        close.setAccessibleName("Fechar")
+        close.clicked.connect(self.reject)
         source = QLabel(f"Janela de origem: {source_title}", self)
         source.setObjectName("mutedText")
         source.setGeometry(12, 25, self.width() - 24, 18)
@@ -171,6 +188,12 @@ class DwmRegionDialog(QDialog):
             f"x={x}, y={y}, {self._selected.width()} × {self._selected.height()} px")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 25:
+            handle = self.windowHandle()
+            if handle is None or not handle.startSystemMove():
+                self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+            return
         if event.button() == Qt.MouseButton.LeftButton and self._display.contains(event.position().toPoint()):
             self._start = event.position().toPoint() - self._display.topLeft()
             if self._overlay is not None:
@@ -179,6 +202,10 @@ class DwmRegionDialog(QDialog):
             self._update_ok_state()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._drag_origin is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._drag_origin)
+            event.accept()
+            return
         if self._start is None:
             return
         point = event.position().toPoint() - self._display.topLeft()
@@ -191,6 +218,7 @@ class DwmRegionDialog(QDialog):
         self._on_overlay_selection(rect)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self._drag_origin = None
         if event.button() == Qt.MouseButton.LeftButton and self._start is not None:
             self.mouseMoveEvent(event)
             self._start = None
