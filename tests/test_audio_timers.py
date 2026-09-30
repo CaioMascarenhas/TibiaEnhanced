@@ -6,11 +6,12 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
 from PySide6.QtGui import QKeySequence  # noqa: E402
 
 from tibiaenhanced.services.audio_timer import AudioTimer  # noqa: E402
-from tibiaenhanced.ui.audio_panel import AudioPanel, DEFAULT_TIMERS  # noqa: E402
+from tibiaenhanced.ui.audio_panel import AudioPanel, DEFAULT_TIMERS, TimerDialog  # noqa: E402
+from tibiaenhanced.ui.design import ToggleCheckBox  # noqa: E402
 
 
 class AudioTimerTests(unittest.TestCase):
@@ -71,6 +72,29 @@ class AudioPanelTests(unittest.TestCase):
             self.assertTrue(all(image.is_file() for image in images))
         self.assertTrue(all(not card.art.pixmap().isNull() for card in panel.cards))
         self.assertTrue(all(not card.shortcut_binding.isEnabled() for card in panel.cards))
+        self.assertTrue(all(not card.removable for card in panel.cards))
+        self.assertTrue(all(isinstance(card.loop_check, ToggleCheckBox) for card in panel.cards))
+        self.assertTrue(all(not any(button.toolTip() == "Excluir temporizador"
+                                    for button in card.findChildren(QPushButton))
+                            for card in panel.cards))
+        panel.close()
+
+    def test_default_timers_cannot_be_deleted_but_custom_timer_can(self) -> None:
+        panel = AudioPanel()
+        defaults = tuple(panel.cards)
+        for card in defaults:
+            panel.remove_card(card)
+        self.assertEqual(tuple(panel.cards), defaults)
+        custom = panel.add_timer(AudioTimer("Personalizado", 120, DEFAULT_TIMERS[0][2]))
+        self.assertTrue(custom.removable)
+        self.assertTrue(any(button.toolTip() == "Excluir temporizador"
+                            for button in custom.findChildren(QPushButton)))
+        custom.loop_check.click()
+        self.assertTrue(custom.timer.loop)
+        panel.remove_card(custom)
+        self.assertEqual(tuple(panel.cards), defaults)
+        dialog = TimerDialog(panel, defaults[0].timer)
+        self.assertIsInstance(dialog.loop_input, ToggleCheckBox)
         panel.close()
 
     def test_shortcut_restarts_timer_and_detects_conflict(self) -> None:

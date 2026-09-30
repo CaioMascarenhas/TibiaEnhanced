@@ -49,6 +49,8 @@ Para executar os testes de estrutura e responsividade:
 
 Quando a bandeja do sistema está disponível, fechar a janela a oculta; o menu do ícone oferece **Mostrar**, **Ocultar** e **Sair**. Sem bandeja, fechar a janela encerra o aplicativo.
 
+Foods e Potions são temporizadores padrão e não podem ser excluídos. O controle **Loop** usa um interruptor arredondado; temporizadores criados pelo usuário podem ser excluídos pelo próprio card.
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)

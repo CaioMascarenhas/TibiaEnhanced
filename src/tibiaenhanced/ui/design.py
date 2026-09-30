@@ -3,10 +3,10 @@
 from functools import lru_cache
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QEvent, QObject, QPointF, Qt
+from PySide6.QtCore import QByteArray, QEvent, QObject, QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QSlider, QStyle, QStyleOptionSlider
+from PySide6.QtWidgets import QCheckBox, QSlider, QStyle, QStyleOptionSlider
 
 
 ASSETS = Path(__file__).resolve().parents[1]
@@ -94,3 +94,37 @@ class CompactSlider(QSlider):
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(accent.lighter(140), 1))
             painter.drawEllipse(QPointF(x, y), 7, 7)
+
+
+class ToggleCheckBox(QCheckBox):
+    """Interruptor de loop que preserva clique, teclado e semântica de checkbox."""
+
+    def sizeHint(self) -> QSize:
+        return QSize(40 + self.fontMetrics().horizontalAdvance(self.text()), 24)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track = QRectF(1, (self.height() - 16) / 2, 30, 16)
+        if self.isEnabled():
+            fill = QColor("#286dcc" if self.isChecked() else "#343b4d")
+            outline = QColor("#7bbcff" if self.isChecked() else "#78869f")
+            knob = QColor("#ffffff" if self.isChecked() else "#c6d2e3")
+        else:
+            fill = QColor("#303441")
+            outline = QColor("#626b7e")
+            knob = QColor("#8e9aac")
+        painter.setPen(QPen(outline, 1))
+        painter.setBrush(fill)
+        painter.drawRoundedRect(track, 8, 8)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(knob)
+        painter.drawEllipse(QPointF(22 if self.isChecked() else 10, self.height() / 2), 5.5, 5.5)
+        if self.hasFocus():
+            painter.setPen(QPen(QColor("#b9dcff"), 1))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(track.adjusted(-2, -2, 2, 2), 10, 10)
+        painter.setPen(QColor("#f1f3f8" if self.isEnabled() else "#8e9aac"))
+        painter.setFont(self.font())
+        painter.drawText(QRectF(39, 0, self.width() - 39, self.height()),
+                         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())
