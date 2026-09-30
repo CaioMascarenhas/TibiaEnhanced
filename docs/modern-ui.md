@@ -5,6 +5,7 @@ Interface PySide6 inspirada na densidade visual da referência TibiaVision: fund
 - **Exo 900** nos títulos e **Inter** nos textos e controles, distribuídas localmente com suas licenças OFL.
 - Ícones **Lucide** com tooltips e nomes acessíveis. Botões, abas, combos e sliders usam cursor de mão quando habilitados.
 - Recortes em grade, com mostrar/ocultar, bloqueio, exclusão e opacidade diretamente no card. O lápis abre as configurações detalhadas.
+- O seletor de janela de origem mostra seta, instrução e nomes abreviados quando longos; o nome completo fica no tooltip e a lista aberta respeita a largura do campo.
 - Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio e de recortes usam tons de azul.
 - O Loop usa um interruptor sem contorno, com trilho azul, botão circular, transição de 170 ms e resposta visual ao hover, clique e foco. Foods e Potions são temporizadores padrão e não podem ser excluídos; apenas os timers criados pelo usuário mostram a ação de excluir.
 - Sliders com trilho fino arredondado, mantendo interação nativa por teclado e arraste.
@@ -23,5 +24,7 @@ As imagens atuais são renderizações Qt com dados fictícios para os recortes.
 | Alertas | ![Alertas antes](images/ui-before-alertas.png) | ![Alertas depois](images/ui-after-alertas.png) |
 
 ![Configuração do recorte](images/ui-dialog-capture.png) ![Configuração do temporizador](images/ui-dialog-timer.png)
+
+![Seletor de janela com instrução](images/ui-selector-closed.png) ![Lista limitada à largura do campo](images/ui-selector-open.png) ![Título longo selecionado](images/ui-selector-selected.png)
 
 Os testes cobrem os controles independentes dos recortes, temporizadores, fontes, cursores, geometria e rolagem. A renderização offscreen não valida o arraste nativo da janela nem a captura DWM real do jogo.
