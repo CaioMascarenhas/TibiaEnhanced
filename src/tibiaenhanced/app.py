@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
-from .ui.design import InteractionCursors, load_fonts
+from .ui.design import HoverEffects, InteractionCursors, load_fonts
 from .ui.theme import app_stylesheet
 from .services.windowing import enable_per_monitor_dpi_awareness
 
@@ -25,6 +25,8 @@ def main() -> int:
     app.setFont(body_font)
     cursors = InteractionCursors(app)
     app.installEventFilter(cursors)
+    hover_effects = HoverEffects(app)
+    app.installEventFilter(hover_effects)
     app.setStyleSheet(app_stylesheet(heading_family, body_family))
 
     window = MainWindow()

@@ -34,6 +34,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
         background: #292c40; border: 1px solid #34374a; border-radius: 10px;
     }}
     QFrame#timerCard {{ border-left: 3px solid #5aa9ff; }}
+    QFrame#timerCard:hover {{ background: #2e3249; border-color: #4f79b2; border-left-color: #76baff; }}
     QFrame#dialogSurface {{ background: #292c40; border: 1px solid #42465c; border-radius: 14px; }}
     QFrame#dialogBody, QFrame#dialogHeader {{ background: transparent; border: 0; }}
     QLabel#dialogTitle {{ color: #ffffff; font-family: "{heading_family}"; font-size: 13pt; font-weight: 900; }}
@@ -89,6 +90,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     }}
     QCheckBox::indicator:hover {{ border-color: #78bcff; }}
     QCheckBox::indicator:checked {{ background: #286dcc; border-color: #78bcff; }}
+    QCheckBox#loopSwitch::indicator {{ width: 0; height: 0; border: 0; background: transparent; }}
 
     QSlider {{ background: transparent; min-height: 16px; max-height: 16px; }}
     QSlider::groove:horizontal {{ height: 4px; background: #484b59; border: 0; border-radius: 2px; }}

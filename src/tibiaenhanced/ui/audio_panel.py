@@ -8,13 +8,13 @@ from PySide6.QtCore import QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
-    QCheckBox, QDialog, QFileDialog, QFormLayout, QFrame, QGridLayout, QHBoxLayout, QLabel,
+    QDialog, QFileDialog, QFormLayout, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QKeySequenceEdit, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
 from ..services.audio_timer import AudioTimer
-from .design import heading_font, icon
+from .design import ToggleCheckBox, heading_font, icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
 
@@ -82,7 +82,8 @@ class TimerDialog(StyledDialog):
         self.volume_input = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
         self.volume_input.setRange(0, 100)
         self.volume_input.setValue(round(timer.volume * 100) if timer else 100)
-        self.loop_input = QCheckBox("Reiniciar automaticamente ao terminar")
+        self.loop_input = ToggleCheckBox("Reiniciar automaticamente")
+        self.loop_input.setToolTip("Reiniciar automaticamente ao terminar")
         self.loop_input.setChecked(timer.loop if timer else False)
         self.shortcut_input = QKeySequenceEdit()
         self.shortcut_input.setKeySequence(QKeySequence(timer.shortcut if timer else ""))
@@ -132,10 +133,11 @@ class TimerDialog(StyledDialog):
 
 
 class TimerCard(QFrame):
-    def __init__(self, timer: AudioTimer, panel: AudioPanel) -> None:
+    def __init__(self, timer: AudioTimer, panel: AudioPanel, *, removable: bool = True) -> None:
         super().__init__()
         self.timer = timer
         self.panel = panel
+        self.removable = removable
         self.setObjectName("timerCard")
         self.setFixedHeight(182)
         self.audio_output = QAudioOutput(self)
@@ -173,7 +175,7 @@ class TimerCard(QFrame):
         options = QHBoxLayout()
         options.addWidget(self.status)
         options.addStretch()
-        self.loop_check = QCheckBox("Loop")
+        self.loop_check = ToggleCheckBox("Loop")
         self.loop_check.setToolTip("Reiniciar automaticamente ao terminar")
         self.loop_check.setChecked(timer.loop)
         self.loop_check.toggled.connect(self._set_loop)
@@ -190,6 +192,8 @@ class TimerCard(QFrame):
         volume_row.addWidget(self.volume, 1)
         self.volume_label = QLabel(f"{self.volume.value()}%")
         self.volume_label.setObjectName("mutedText")
+        self.volume_label.setFixedWidth(self.volume_label.fontMetrics().horizontalAdvance("100%") + 4)
+        self.volume_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         volume_row.addWidget(self.volume_label)
         layout.addLayout(volume_row)
         buttons = QHBoxLayout()
@@ -199,12 +203,14 @@ class TimerCard(QFrame):
         self.start_button.clicked.connect(self._toggle)
         buttons.addWidget(self.start_button)
         buttons.addStretch()
-        for name, tooltip, callback in (
+        actions = [
             ("rotate-ccw", "Zerar temporizador", self._reset),
             ("volume-2", "Testar som", self.play_sound),
             ("pencil", "Editar temporizador e atalho", self._edit),
-            ("trash", "Excluir temporizador", lambda: panel.remove_card(self)),
-        ):
+        ]
+        if self.removable:
+            actions.append(("trash", "Excluir temporizador", lambda: panel.remove_card(self)))
+        for name, tooltip, callback in actions:
             button = QPushButton()
             button.setObjectName("iconButton")
             button.setFixedSize(25, 26)
@@ -329,6 +335,8 @@ class AudioPanel(QWidget):
         self.master_volume.valueChanged.connect(self.update_audio_volumes)
         volume_row.addWidget(self.master_volume)
         self.master_label = QLabel()
+        self.master_label.setFixedWidth(self.master_label.fontMetrics().horizontalAdvance("100%") + 4)
+        self.master_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         volume_row.addWidget(self.master_label)
         volume_row.addStretch()
         layout.addLayout(volume_row)
@@ -346,23 +354,25 @@ class AudioPanel(QWidget):
         layout.addWidget(scroll, 1)
 
         for name, duration, sound, images in DEFAULT_TIMERS:
-            self.add_timer(AudioTimer(name, duration, sound, images=images))
+            self.add_timer(AudioTimer(name, duration, sound, images=images), removable=False)
         self.update_audio_volumes()
         self.ticker = QTimer(self)
         self.ticker.setInterval(200)
         self.ticker.timeout.connect(self._tick)
         self.ticker.start()
 
-    def add_timer(self, timer: AudioTimer) -> TimerCard:
+    def add_timer(self, timer: AudioTimer, *, removable: bool = True) -> TimerCard:
         if self.shortcut_conflict(QKeySequence(timer.shortcut)):
             raise ValueError("Atalho já usado por outro temporizador")
-        card = TimerCard(timer, self)
+        card = TimerCard(timer, self, removable=removable)
         self.cards.append(card)
         self._reflow_cards()
         self.update_audio_volumes()
         return card
 
     def remove_card(self, card: TimerCard) -> None:
+        if card not in self.cards or not card.removable:
+            return
         card.timer.reset()
         card.player.stop()
         self.cards.remove(card)

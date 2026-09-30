@@ -14,6 +14,7 @@ from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
 from .design import icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
+from .window_selector import WindowSelector
 
 
 @dataclass(slots=True)
@@ -47,10 +48,12 @@ class CapturePanel(QWidget):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(10)
 
+        source_heading = QLabel("JANELA DE ORIGEM")
+        source_heading.setObjectName("eyebrow")
+        layout.addWidget(source_heading)
         source_row = QHBoxLayout()
         source_row.setSpacing(6)
-        self.window_combo = QComboBox()
-        self.window_combo.setToolTip("Escolha a janela que será espelhada")
+        self.window_combo = WindowSelector()
         source_row.addWidget(self.window_combo, 1)
         refresh_button = QPushButton()
         refresh_button.setFixedWidth(30)
@@ -179,13 +182,20 @@ class CapturePanel(QWidget):
         try:
             for window in list_windows():
                 self.window_combo.addItem(window.title, window.hwnd)
+                self.window_combo.setItemData(self.window_combo.count() - 1, window.title,
+                                              Qt.ItemDataRole.ToolTipRole)
         except Exception as exc:
             self.status_label.setText(f"Não foi possível listar as janelas: {exc}")
         if previous is not None:
             index = self.window_combo.findData(previous)
             if index >= 0:
                 self.window_combo.setCurrentIndex(index)
+            else:
+                self.window_combo.setCurrentIndex(-1)
+        else:
+            self.window_combo.setCurrentIndex(-1)
         self.window_combo.blockSignals(False)
+        self.window_combo._update_tooltip()
         self._update_controls()
 
     def add_mirror(self) -> None:
@@ -295,6 +305,8 @@ class CapturePanel(QWidget):
             slider.setMinimumWidth(45)
             value = QLabel(f"{slider.value()}%")
             value.setObjectName("mutedText")
+            value.setFixedWidth(value.fontMetrics().horizontalAdvance("100%") + 4)
+            value.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             slider.valueChanged.connect(lambda percent, key=entry.key, label=value: self._card_opacity(key, percent, label))
             actions.addWidget(slider, 1)
             actions.addWidget(value)

@@ -2,18 +2,21 @@
 
 import os
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QPoint, Qt  # noqa: E402
+from PySide6.QtCore import QEvent, QPoint, Qt  # noqa: E402
 from PySide6.QtGui import QFontDatabase  # noqa: E402
-from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
+from PySide6.QtWidgets import QApplication, QFrame, QPushButton  # noqa: E402
 from tibiaenhanced.ui.dialog_shell import StyledDialog  # noqa: E402
 from tibiaenhanced.ui.audio_panel import TimerDialog, AudioPanel  # noqa: E402
 from tibiaenhanced.ui.capture_panel import CapturePanel  # noqa: E402
+from tibiaenhanced.ui.window_selector import WindowSelector  # noqa: E402
 from tibiaenhanced.ui.design import CompactSlider  # noqa: E402
 
-from tibiaenhanced.ui.design import ASSETS, InteractionCursors, heading_font, icon, load_fonts  # noqa: E402
+from tibiaenhanced.ui.design import ASSETS, HoverEffects, InteractionCursors, heading_font, icon, load_fonts  # noqa: E402
 from tibiaenhanced.ui.main_window import MainWindow  # noqa: E402
 
 
@@ -76,6 +79,45 @@ class ModernUiTests(unittest.TestCase):
         self.assertEqual(capture.transparency_slider.accent, "#5a9dff")
         panel.close()
         capture.close()
+
+    def test_primary_buttons_and_cards_receive_hover_elevation(self) -> None:
+        effects = HoverEffects(self.app)
+        self.app.installEventFilter(effects)
+        for widget, name in ((QPushButton("Criar"), "primaryButton"),
+                             (QFrame(), "timerCard")):
+            widget.setObjectName(name)
+            widget.ensurePolished()
+            self.assertIsNotNone(widget.graphicsEffect())
+            QApplication.sendEvent(widget, QEvent(QEvent.Type.Enter))
+            self.assertIn(widget, effects._animations)
+            widget.close()
+        self.app.removeEventFilter(effects)
+
+    def test_window_selector_keeps_long_titles_inside_the_window(self) -> None:
+        long_title = "Tibia - Uma janela com título extremamente longo para testar o seletor"
+        windows = [SimpleNamespace(title=long_title, hwnd=42),
+                   SimpleNamespace(title="Tibia", hwnd=43)]
+        with patch("tibiaenhanced.ui.capture_panel.list_windows", return_value=windows):
+            panel = CapturePanel()
+            panel.resize(560, 380)
+            panel.show()
+            self.app.processEvents()
+            combo = panel.window_combo
+            self.assertIsInstance(combo, WindowSelector)
+            self.assertEqual(combo.currentIndex(), -1)
+            self.assertFalse(panel.add_button.isEnabled())
+            combo.showPopup()
+            self.app.processEvents()
+            self.assertEqual(combo.view().window().width(), combo.width())
+            self.assertEqual(panel.width(), 560)
+            combo.hidePopup()
+            combo.setCurrentIndex(0)
+            self.assertEqual(combo.currentText(), long_title)
+            self.assertEqual(combo.toolTip(), long_title)
+            self.assertTrue(panel.add_button.isEnabled())
+            panel.refresh_windows()
+            self.assertEqual(combo.currentData(), 42)
+            panel.close()
 
 
 if __name__ == "__main__":
