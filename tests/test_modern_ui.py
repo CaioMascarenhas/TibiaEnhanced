@@ -73,7 +73,7 @@ class ModernUiTests(unittest.TestCase):
         self.assertIsInstance(capture.details_dialog, StyledDialog)
         self.assertTrue(capture.details_dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
         self.assertIsInstance(capture.transparency_slider, CompactSlider)
-        self.assertEqual(capture.transparency_slider.accent, "#ff940d")
+        self.assertEqual(capture.transparency_slider.accent, "#5a9dff")
         panel.close()
         capture.close()
 

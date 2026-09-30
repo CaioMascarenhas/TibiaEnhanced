@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
         self.statusBar().setSizeGripEnabled(False)
         self.author_link = QLabel(
             'Feito por <a href="https://github.com/CaioMascarenhas" '
-            'style="color: #ff9b31; text-decoration: none;">Mascarenhas</a>'
+            'style="color: #8dc8ff; text-decoration: none;">Mascarenhas</a>'
         )
         self.author_link.setObjectName("footerCredit")
         self.author_link.setOpenExternalLinks(True)

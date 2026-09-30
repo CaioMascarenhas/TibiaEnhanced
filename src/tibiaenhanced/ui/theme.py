@@ -19,7 +19,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     QLabel#sectionTitle {{ color: #e9f1ff; font-size: 11pt; }}
     QLabel#selectedTitle {{ color: #ffffff; font-size: 11pt; }}
     QLabel#timerTitle {{ color: #f5f8ff; font-size: 11pt; }}
-    QLabel#timerCountdown {{ color: #ffb454; font-size: 18pt; }}
+    QLabel#timerCountdown {{ color: #7bbcff; font-size: 18pt; }}
     QLabel#mutedText, QLabel#eyebrow {{ color: #e4e8f1; font-weight: 600; }}
     QLabel#eyebrow {{ font-size: 8pt; font-weight: 700; padding-top: 4px; }}
     QLabel#stateBadge {{ font-size: 8pt; font-weight: 700; padding: 5px 9px; }}
@@ -33,7 +33,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     QFrame#card, QFrame#timerCard {{
         background: #292c40; border: 1px solid #34374a; border-radius: 10px;
     }}
-    QFrame#timerCard {{ border-left: 3px solid #ff940d; }}
+    QFrame#timerCard {{ border-left: 3px solid #5aa9ff; }}
     QFrame#dialogSurface {{ background: #292c40; border: 1px solid #42465c; border-radius: 14px; }}
     QFrame#dialogBody, QFrame#dialogHeader {{ background: transparent; border: 0; }}
     QLabel#dialogTitle {{ color: #ffffff; font-family: "{heading_family}"; font-size: 13pt; font-weight: 900; }}
@@ -49,15 +49,15 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     }}
     QPushButton:hover, QToolButton:hover {{ background: #3d404d; border-color: #666978; }}
     QPushButton:pressed, QToolButton:pressed {{ background: #292c36; }}
-    QPushButton:focus, QToolButton:focus {{ border: 1px solid #ff940d; }}
+    QPushButton:focus, QToolButton:focus {{ border: 1px solid #78bcff; }}
     QPushButton:disabled, QToolButton:disabled {{
         color: #788da5; background: #1a283b; border-color: #2b3a4e;
     }}
     QPushButton#primaryButton {{
-        color: #21180d; background: #ff940d; border-color: #ffad40; font-weight: 700;
+        color: #ffffff; background: #286dcc; border-color: #5aa9ff; font-weight: 700;
     }}
-    QPushButton#primaryButton:hover {{ background: #ffac3d; }}
-    QPushButton#primaryButton:disabled {{ color: #637a89; background: #2c5868; border-color: #3b6a78; }}
+    QPushButton#primaryButton:hover {{ background: #327ee4; border-color: #8dc8ff; }}
+    QPushButton#primaryButton:disabled {{ color: #91a6c0; background: #304662; border-color: #3c5677; }}
     QPushButton#dangerButton {{ color: #ffffff; background: #4e2935; border-color: #ad6675; }}
     QPushButton#dangerButton:hover {{ background: #573241; border-color: #a95a69; }}
     QPushButton#chromeButton, QPushButton#chromeCloseButton {{
@@ -75,7 +75,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     QComboBox, QLineEdit, QSpinBox, QKeySequenceEdit {{ font-weight: 600; }}
     QSpinBox::up-button, QSpinBox::down-button {{ width: 0; border: 0; }}
     QComboBox:hover, QLineEdit:hover, QSpinBox:hover, QKeySequenceEdit:hover {{ border-color: #56718d; }}
-    QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QKeySequenceEdit:focus {{ border: 1px solid #ff940d; }}
+    QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QKeySequenceEdit:focus {{ border: 1px solid #78bcff; }}
     QComboBox:disabled, QLineEdit:disabled, QSpinBox:disabled {{ color: #7d90a6; background: #182536; }}
     QComboBox::drop-down {{ border: 0; width: 25px; }}
     QComboBox QAbstractItemView {{
@@ -87,16 +87,16 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
         width: 16px; height: 16px; background: #101c2d;
         border: 1px solid #52708b; border-radius: 5px;
     }}
-    QCheckBox::indicator:hover {{ border-color: #ff940d; }}
-    QCheckBox::indicator:checked {{ background: #ff940d; border-color: #ffad40; }}
+    QCheckBox::indicator:hover {{ border-color: #78bcff; }}
+    QCheckBox::indicator:checked {{ background: #286dcc; border-color: #78bcff; }}
 
     QSlider {{ background: transparent; min-height: 16px; max-height: 16px; }}
     QSlider::groove:horizontal {{ height: 4px; background: #484b59; border: 0; border-radius: 2px; }}
-    QSlider::sub-page:horizontal {{ background: #ff940d; border: 0; border-radius: 2px; margin: 6px 0; }}
+    QSlider::sub-page:horizontal {{ background: #5aa9ff; border: 0; border-radius: 2px; margin: 6px 0; }}
     QSlider::add-page:horizontal {{ background: #484b59; border: 0; border-radius: 2px; margin: 6px 0; }}
     QSlider::handle:horizontal {{
         width: 10px; margin: -4px 0; border-radius: 6px;
-        background: #ff9b23; border: 1px solid #ff940d;
+        background: #5aa9ff; border: 1px solid #78bcff;
     }}
     QSlider::handle:horizontal:hover {{ background: #ffffff; border-color: #a6efff; }}
     QSlider:disabled::sub-page:horizontal {{ background: #3b6475; }}
@@ -127,8 +127,8 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
         padding: 5px 10px; margin: 2px 3px 3px 3px; min-width: 68px;
     }}
     QTabBar::tab:hover {{ background: #263b55; color: #f1f7ff; }}
-    QTabBar::tab:selected {{ color: #ffab43; background: #35313a; border-color: #ff940d; font-weight: 700; }}
-    QTabBar::tab:focus {{ border: 1px solid #ff940d; }}
+    QTabBar::tab:selected {{ color: #c9e5ff; background: #233650; border-color: #5aa9ff; font-weight: 700; }}
+    QTabBar::tab:focus {{ border: 1px solid #78bcff; }}
     QStatusBar {{ color: #9599a5; background: transparent; border-top: 1px solid #30333b; font-size: 8pt; }}
     QStatusBar::item {{ border: 0; }}
     QMenu {{ color: #eaf3ff; background: #17243a; border: 1px solid #405672; padding: 5px; }}

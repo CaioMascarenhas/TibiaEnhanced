@@ -108,7 +108,7 @@ class TimerDialog(StyledDialog):
         cancel.clicked.connect(self.reject)
         save = QPushButton("Salvar")
         save.setObjectName("primaryButton")
-        save.setIcon(icon("plus", "#092035", 15))
+        save.setIcon(icon("plus", "#ffffff", 15))
         save.clicked.connect(self._validate)
         actions.addWidget(cancel)
         actions.addWidget(save)
@@ -281,19 +281,19 @@ class TimerCard(QFrame):
         if self.timer.running:
             self.status.setText("Em andamento")
             self.start_button.setText("Pausar")
-            self.start_button.setIcon(icon("pause", "#092035", 15))
+            self.start_button.setIcon(icon("pause", "#ffffff", 15))
         elif self.timer.finished:
             self.status.setText("Concluído")
             self.start_button.setText("Iniciar")
-            self.start_button.setIcon(icon("play", "#092035", 15))
+            self.start_button.setIcon(icon("play", "#ffffff", 15))
         elif self.timer.remaining() < self.timer.duration_seconds:
             self.status.setText("Pausado")
             self.start_button.setText("Retomar")
-            self.start_button.setIcon(icon("play", "#092035", 15))
+            self.start_button.setIcon(icon("play", "#ffffff", 15))
         else:
             self.status.setText("Pronto")
             self.start_button.setText("Iniciar")
-            self.start_button.setIcon(icon("play", "#092035", 15))
+            self.start_button.setIcon(icon("play", "#ffffff", 15))
 
 
 class AudioPanel(QWidget):
@@ -312,7 +312,7 @@ class AudioPanel(QWidget):
         heading.addStretch()
         create = QPushButton("Novo timer")
         create.setObjectName("primaryButton")
-        create.setIcon(icon("plus", "#092035", 16))
+        create.setIcon(icon("plus", "#ffffff", 16))
         create.setIconSize(QSize(16, 16))
         create.clicked.connect(self._create)
         heading.addWidget(create)

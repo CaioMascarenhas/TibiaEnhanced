@@ -1,11 +1,11 @@
 # Redesign visual da issue #9
 
-Interface PySide6 inspirada na densidade visual da referência TibiaVision: fundo grafite, cards violeta escuro, destaques laranja e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo.
+Interface PySide6 inspirada na densidade visual da referência TibiaVision: fundo grafite, cards violeta escuro, destaques azuis e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo.
 
 - **Exo 900** nos títulos e **Inter** nos textos e controles, distribuídas localmente com suas licenças OFL.
 - Ícones **Lucide** com tooltips e nomes acessíveis. Botões, abas, combos e sliders usam cursor de mão quando habilitados.
 - Recortes em grade, com mostrar/ocultar, bloqueio, exclusão e opacidade diretamente no card. O lápis abre as configurações detalhadas.
-- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio usam azul.
+- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio e de recortes usam tons de azul.
 - Sliders com trilho fino arredondado, mantendo interação nativa por teclado e arraste.
 - Barra de título própria com ícone, minimizar, maximizar e fechar; bordas redimensionáveis.
 - Rodapé “Feito por Mascarenhas”, com link para o GitHub do autor.

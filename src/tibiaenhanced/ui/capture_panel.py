@@ -61,7 +61,7 @@ class CapturePanel(QWidget):
         source_row.addWidget(refresh_button)
         self.add_button = QPushButton("Novo recorte")
         self.add_button.setObjectName("primaryButton")
-        self.add_button.setIcon(icon("plus", "#092035", 16))
+        self.add_button.setIcon(icon("plus", "#ffffff", 16))
         self.add_button.setIconSize(QSize(16, 16))
         self.add_button.setToolTip("Escolher uma área e criar um espelho")
         self.add_button.clicked.connect(self.add_mirror)

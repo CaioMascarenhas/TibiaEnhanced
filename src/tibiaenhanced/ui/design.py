@@ -66,7 +66,7 @@ class InteractionCursors(QObject):
 class CompactSlider(QSlider):
     """Trilho arredondado, mantendo teclado, arraste e acessibilidade do Qt."""
 
-    def __init__(self, orientation, parent=None, *, accent: str = "#ff940d") -> None:
+    def __init__(self, orientation, parent=None, *, accent: str = "#5a9dff") -> None:
         super().__init__(orientation, parent)
         self.accent = accent
 
