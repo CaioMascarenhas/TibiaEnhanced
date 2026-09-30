@@ -5,8 +5,9 @@ import time
 from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QCloseEvent, QMouseEvent, QPaintEvent, QPainter, QPen
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox, QWidget
+from PySide6.QtGui import QColor, QCloseEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPen
+from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QLabel, QLineEdit,
+                               QMessageBox, QWidget)
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
@@ -76,7 +77,9 @@ class _SelectionOverlay(QWidget):
 class DwmRegionDialog(QDialog):
     """Mostra o cliente inteiro do jogo e converte o arrasto em pixels de origem."""
 
-    def __init__(self, hwnd: int, parent: QWidget | None = None) -> None:
+    def __init__(self, hwnd: int, parent: QWidget | None = None, *,
+                 suggested_name: str = "Recorte 1",
+                 source_title: str = "Janela selecionada") -> None:
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self._hwnd = hwnd
@@ -86,19 +89,34 @@ class DwmRegionDialog(QDialog):
         self._selected = QRect()
         self._source_size = (1, 1)
         area = get_client_area(hwnd)
-        scale = min(1.0, 1000 / area.width, 650 / area.height)
+        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+        available = screen.availableGeometry() if screen else QRect(0, 0, 1280, 800)
+        max_width = max(300, min(1000, available.width() - 80))
+        max_height = max(180, min(650, available.height() - 210))
+        scale = min(1.0, max_width / area.width, max_height / area.height)
         self._display = QRect(12, 46, max(100, round(area.width * scale)),
                               max(80, round(area.height * scale)))
-        self.setWindowTitle("Selecionar região do Tibia")
-        self.setFixedSize(self._display.width() + 24, self._display.bottom() + 92)
-        heading = QLabel("Arraste no espelho para marcar o recorte.", self)
-        heading.setGeometry(12, 8, self.width() - 24, 32)
-        self._coordinates = QLabel("Nenhuma região selecionada", self)
+        self.setWindowTitle("Novo recorte")
+        self.setFixedSize(self._display.width() + 24, self._display.bottom() + 152)
+        heading = QLabel("Arraste na imagem para marcar a área do novo espelho.", self)
+        heading.setGeometry(12, 4, self.width() - 24, 20)
+        source = QLabel(f"Janela de origem: {source_title}", self)
+        source.setObjectName("mutedText")
+        source.setGeometry(12, 25, self.width() - 24, 18)
+        self._coordinates = QLabel("Nenhuma área selecionada", self)
         self._coordinates.setGeometry(12, self._display.bottom() + 8, self.width() - 24, 25)
+        name_label = QLabel("Nome do recorte", self)
+        name_label.setGeometry(12, self._display.bottom() + 39, self.width() - 24, 20)
+        self.name_input = QLineEdit(self)
+        self.name_input.setText(suggested_name)
+        self.name_input.setGeometry(12, self._display.bottom() + 61,
+                                    self.width() - 24, 32)
+        self.name_input.textChanged.connect(self._update_ok_state)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
                                    QDialogButtonBox.StandardButton.Cancel, self)
-        buttons.setGeometry(12, self._display.bottom() + 38, self.width() - 24, 36)
+        buttons.setGeometry(12, self._display.bottom() + 104, self.width() - 24, 36)
         self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        self._ok.setText("Criar espelho")
         self._ok.setEnabled(False)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -107,6 +125,14 @@ class DwmRegionDialog(QDialog):
     @property
     def selection(self) -> QRect:
         return self._selected
+
+    @property
+    def name(self) -> str:
+        return self.name_input.text().strip()
+
+    def _update_ok_state(self) -> None:
+        self._ok.setEnabled(self._selected.width() >= 4 and
+                            self._selected.height() >= 4 and bool(self.name))
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -140,7 +166,7 @@ class DwmRegionDialog(QDialog):
         right = round((rect.x() + rect.width()) * source_w / r.width())
         bottom = round((rect.y() + rect.height()) * source_h / r.height())
         self._selected = QRect(x, y, right - x, bottom - y)
-        self._ok.setEnabled(self._selected.width() >= 4 and self._selected.height() >= 4)
+        self._update_ok_state()
         self._coordinates.setText(
             f"x={x}, y={y}, {self._selected.width()} × {self._selected.height()} px")
 
@@ -150,7 +176,7 @@ class DwmRegionDialog(QDialog):
             if self._overlay is not None:
                 self._overlay.set_selection(QRect())
             self._selected = QRect()
-            self._ok.setEnabled(False)
+            self._update_ok_state()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self._start is None:
@@ -204,8 +230,8 @@ class DwmMirrorWindow(QWidget):
         self.setWindowTitle(f"Tibia Enhanced — {region.name}")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        self.resize(max(180, region.width), max(120, region.height))
-        self.setMinimumSize(100, 80)
+        self.resize(max(32, region.width), max(32, region.height))
+        self.setMinimumSize(24, 24)
         self.setStyleSheet("background: black")
         self.setMouseTracking(True)
         self._timer = QTimer(self)
@@ -309,7 +335,7 @@ class DwmMirrorWindow(QWidget):
         self._refresh()
 
     def _edges_at(self, point: QPoint) -> Qt.Edges:
-        margin = 9
+        margin = min(9, max(4, min(self.width(), self.height()) // 6))
         edges = Qt.Edges()
         if point.x() < margin:
             edges |= Qt.Edge.LeftEdge

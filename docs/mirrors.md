@@ -6,7 +6,7 @@ Os espelhos da mesma janela registram miniaturas DWM com o mesmo `HWND` de orige
 
 O modo padrão **Preservar proporção** centraliza a imagem e deixa margens pretas. O modo **Preencher janela** ocupa toda a área e pode distorcer a imagem. O cálculo do destino é atualizado ao redimensionar a janela e usa a escala DPI do monitor.
 
-A imagem pode ser arrastada para mover o espelho. Uma faixa de 9 pixels nas bordas inicia o redimensionamento nativo do Windows. Se a operação nativa não estiver disponível, o Qt aplica a mudança de geometria. O controle de transparência usa a opacidade da janela Qt; 0% de transparência é opaco e 90% mantém o espelho pouco visível, mas recuperável pelo painel.
+A imagem pode ser arrastada para mover o espelho. Uma faixa de 4 a 9 pixels nas bordas inicia o redimensionamento nativo do Windows; a faixa se adapta a espelhos pequenos. Se a operação nativa não estiver disponível, o Qt aplica a mudança de geometria. O tamanho mínimo é 24 × 24 pixels. O controle de transparência usa a opacidade da janela Qt; 0% de transparência é opaco e 90% mantém o espelho pouco visível, mas recuperável pelo painel.
 
 Bloquear aplica os estilos Windows `WS_EX_NOACTIVATE`, `WS_EX_TRANSPARENT` e `WS_EX_LAYERED` à janela do espelho. Isso impede que ela receba cliques e foco; o jogador pode desbloqueá-la no painel. O espelho permanece sempre visível enquanto aberto. O app não modifica a janela nem o processo do Tibia.
 

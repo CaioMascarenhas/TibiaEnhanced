@@ -102,6 +102,15 @@ def main() -> None:
         print({"underlay_clicks": clicks}, flush=True)
         red.close()
         print({"after_hiding_one": (red.active, blue.active)}, flush=True)
+        blue.resize(24, 24)
+        QTest.qWait(200)
+        tiny_before = blue.pos()
+        drag(blue.mapToGlobal(QPoint(12, 12)), 30, 20)
+        tiny_after = blue.pos()
+        print({"tiny_size": (blue.width(), blue.height()),
+               "tiny_color": center_color(int(blue.winId())),
+               "tiny_move_delta": (tiny_after.x() - tiny_before.x(),
+                                   tiny_after.y() - tiny_before.y())}, flush=True)
         blue.close()
         print({"after_hiding_all": (red.active, blue.active)}, flush=True)
         app.quit()

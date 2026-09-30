@@ -4,7 +4,7 @@
 
 O protótipo permite escolher uma janela, arrastar um retângulo sobre uma miniatura ao vivo e abrir um espelho recortado em outra janela. As coordenadas do recorte são relativas à área interna da janela original; o DWM mantém a relação quando ela se move. A aplicação revalida as dimensões a cada meio segundo e encerra o espelho se a janela fechar, minimizar ou ficar menor que o recorte.
 
-O espelho principal usa `DwmRegisterThumbnail` e `DwmUpdateThumbnailProperties` por `ctypes` em Python. Essas APIs exigem uma janela de destino de nível superior, razão pela qual o seletor e a prévia são janelas separadas. A miniatura é composta pelo Windows; Python controla a área de origem e a geometria de destino, mas não recebe os quadros em memória. O painel mostra o uso aproximado de CPU do processo. A taxa real de quadros da miniatura não é exposta pela API DWM; o painel informa essa limitação sem apresentar uma medida falsa.
+O espelho principal usa `DwmRegisterThumbnail` e `DwmUpdateThumbnailProperties` por `ctypes` em Python. Essas APIs exigem uma janela de destino de nível superior, razão pela qual o seletor e a prévia são janelas separadas. A miniatura é composta pelo Windows; Python controla a área de origem e a geometria de destino, mas não recebe os quadros em memória. A taxa real de quadros da miniatura não é exposta pela API DWM. A antiga métrica de CPU foi retirada da interface na issue #7.
 
 ## Testes locais
 

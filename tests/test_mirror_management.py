@@ -59,13 +59,16 @@ class MirrorManagementTests(unittest.TestCase):
             1: MirrorEntry(1, 42, "Tibia", Region("HP", 0, 0, 100, 40), first_window),
             2: MirrorEntry(2, 42, "Tibia", Region("Mana", 120, 0, 100, 40), second_window),
         }
-        panel._refresh_list(1)
+        panel._refresh_tree(1)
         panel._show_entry(panel._entries[1])
         panel._show_entry(panel._entries[2])
         self.assertTrue(first_window.active)
         self.assertTrue(second_window.active)
 
-        panel.mirror_list.setCurrentRow(0)
+        root = panel.mirror_tree.topLevelItem(0)
+        self.assertEqual(root.text(0), "Tibia")
+        self.assertEqual(root.childCount(), 2)
+        panel.mirror_tree.setCurrentItem(root.child(0))
         panel.toggle_lock()
         self.assertTrue(first_window.locked)
         self.assertFalse(second_window.locked)
@@ -76,7 +79,7 @@ class MirrorManagementTests(unittest.TestCase):
         self.assertFalse(first_window.active)
         self.assertTrue(second_window.active)
 
-        panel.mirror_list.setCurrentRow(1)
+        panel.mirror_tree.setCurrentItem(panel.mirror_tree.topLevelItem(0).child(1))
         panel.delete_current()
         self.assertFalse(second_window.active)
         self.assertEqual([entry.region.name for entry in panel.entries], ["HP"])
