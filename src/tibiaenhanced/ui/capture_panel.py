@@ -2,16 +2,17 @@
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (QComboBox, QFrame, QGridLayout, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QMessageBox,
-                               QPushButton, QScrollArea, QSlider, QStyle, QTreeWidget,
+                               QPushButton, QScrollArea, QSlider, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.windowing import list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
+from .design import heading_font, icon
 
 
 @dataclass(slots=True)
@@ -40,11 +41,12 @@ class CapturePanel(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 18, 22, 18)
-        layout.setSpacing(14)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(10)
 
         title = QLabel("Espelhos")
         title.setObjectName("pageTitle")
+        title.setFont(heading_font(19))
         layout.addWidget(title)
         subtitle = QLabel("Organize as áreas do Tibia que você quer acompanhar durante o jogo.")
         subtitle.setObjectName("mutedText")
@@ -53,8 +55,8 @@ class CapturePanel(QWidget):
         source_card = QFrame()
         source_card.setObjectName("card")
         source_layout = QVBoxLayout(source_card)
-        source_layout.setContentsMargins(18, 16, 18, 16)
-        source_layout.setSpacing(10)
+        source_layout.setContentsMargins(14, 11, 14, 11)
+        source_layout.setSpacing(7)
         source_heading = QLabel("1  Janela de origem")
         source_heading.setObjectName("sectionTitle")
         source_layout.addWidget(source_heading)
@@ -64,13 +66,15 @@ class CapturePanel(QWidget):
         self.window_combo.setToolTip("Escolha a janela que será espelhada")
         source_row.addWidget(self.window_combo, 1)
         refresh_button = QPushButton("Atualizar")
-        refresh_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        refresh_button.setIcon(icon("refresh-cw", size=16))
+        refresh_button.setIconSize(QSize(16, 16))
         refresh_button.setToolTip("Atualizar a lista de janelas abertas")
         refresh_button.clicked.connect(self.refresh_windows)
         source_row.addWidget(refresh_button)
         self.add_button = QPushButton("Novo recorte")
         self.add_button.setObjectName("primaryButton")
-        self.add_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
+        self.add_button.setIcon(icon("plus", "#092035", 16))
+        self.add_button.setIconSize(QSize(16, 16))
         self.add_button.setToolTip("Escolher uma área e criar um espelho")
         self.add_button.clicked.connect(self.add_mirror)
         source_row.addWidget(self.add_button)
@@ -78,13 +82,13 @@ class CapturePanel(QWidget):
         layout.addWidget(source_card)
 
         columns = QHBoxLayout()
-        columns.setSpacing(14)
+        columns.setSpacing(10)
 
         list_card = QFrame()
         list_card.setObjectName("card")
         list_layout = QVBoxLayout(list_card)
-        list_layout.setContentsMargins(18, 16, 18, 16)
-        list_layout.setSpacing(10)
+        list_layout.setContentsMargins(14, 11, 14, 11)
+        list_layout.setSpacing(7)
         list_heading = QLabel("2  Janelas e recortes")
         list_heading.setObjectName("sectionTitle")
         list_layout.addWidget(list_heading)
@@ -92,7 +96,7 @@ class CapturePanel(QWidget):
         self.mirror_tree.setHeaderLabels(["ORIGEM / RECORTE", "ESTADO"])
         self.mirror_tree.setRootIsDecorated(True)
         self.mirror_tree.setIndentation(22)
-        self.mirror_tree.setMinimumWidth(360)
+        self.mirror_tree.setMinimumWidth(300)
         self.mirror_tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.mirror_tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.mirror_tree.itemSelectionChanged.connect(self._update_controls)
@@ -105,8 +109,8 @@ class CapturePanel(QWidget):
         detail_card = QFrame()
         detail_card.setObjectName("card")
         detail_layout = QVBoxLayout(detail_card)
-        detail_layout.setContentsMargins(18, 16, 18, 16)
-        detail_layout.setSpacing(10)
+        detail_layout.setContentsMargins(14, 11, 14, 11)
+        detail_layout.setSpacing(7)
         detail_heading = QLabel("3  Recorte selecionado")
         detail_heading.setObjectName("sectionTitle")
         detail_layout.addWidget(detail_heading)
@@ -132,16 +136,16 @@ class CapturePanel(QWidget):
         self.show_button.clicked.connect(self.toggle_visibility)
         actions.addWidget(self.show_button, 0, 0)
         self.lock_button = QPushButton("Bloquear cliques")
-        self.lock_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        self.lock_button.setIcon(icon("lock-keyhole", size=16))
         self.lock_button.clicked.connect(self.toggle_lock)
         actions.addWidget(self.lock_button, 0, 1)
         self.rename_button = QPushButton("Renomear")
-        self.rename_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        self.rename_button.setIcon(icon("pencil", size=16))
         self.rename_button.clicked.connect(self.rename_current)
         actions.addWidget(self.rename_button, 1, 0)
         self.delete_button = QPushButton("Excluir recorte")
         self.delete_button.setObjectName("dangerButton")
-        self.delete_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        self.delete_button.setIcon(icon("trash", "#ffc6cb", 16))
         self.delete_button.clicked.connect(self.delete_current)
         actions.addWidget(self.delete_button, 1, 1)
         detail_layout.addLayout(actions)
@@ -252,19 +256,19 @@ class CapturePanel(QWidget):
             root = roots.get(entry.source_hwnd)
             if root is None:
                 root = QTreeWidgetItem(self.mirror_tree, [entry.source_title, "ORIGEM"])
-                root.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
+                root.setIcon(0, icon("monitor", "#8bdcf2", 16))
                 root.setFlags(root.flags() & ~Qt.ItemFlag.ItemIsSelectable)
                 font = QFont(root.font(0))
                 font.setBold(True)
                 root.setFont(0, font)
-                root.setForeground(0, QColor("#f1d199"))
+                root.setForeground(0, QColor("#a2e8f6"))
                 root.setExpanded(True)
                 roots[entry.source_hwnd] = root
             state = "VISÍVEL" if entry.visible else "OCULTO"
             if entry.locked:
                 state += " · TRAVADO"
             child = QTreeWidgetItem(root, [entry.region.name, state])
-            child.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+            child.setIcon(0, icon("eye" if entry.visible else "eye-off", "#a4c4dc", 16))
             child.setData(0, Qt.ItemDataRole.UserRole, entry.key)
             child.setToolTip(0, f"{entry.region.width} × {entry.region.height} px")
             child.setForeground(1, QColor("#7ed7b0" if entry.visible else "#aeb9c7"))
@@ -294,7 +298,7 @@ class CapturePanel(QWidget):
             self.selected_source.setText("A origem e os controles aparecerão aqui.")
             self.selected_coordinates.clear()
             self.state_label.setText("SEM SELEÇÃO")
-            self.state_label.setStyleSheet("color: #9aaaba; background: #293543; padding: 6px 10px; border-radius: 6px;")
+            self.state_label.setStyleSheet("color: #9fb4c9; background: #24344a; padding: 5px 9px; border-radius: 7px;")
             self.transparency_label.setText("Transparência  —")
             return
         self.selected_name.setText(entry.region.name)
@@ -307,12 +311,11 @@ class CapturePanel(QWidget):
         self.state_label.setText(state)
         bg, fg = ("#1d4738", "#a8ebc2") if entry.visible else ("#39404a", "#d0d8e0")
         self.state_label.setStyleSheet(
-            f"color: {fg}; background: {bg}; padding: 6px 10px; border-radius: 6px;")
+            f"color: {fg}; background: {bg}; padding: 5px 9px; border-radius: 7px;")
         self.show_button.setText("Ocultar espelho" if entry.visible else "Mostrar espelho")
-        self.show_button.setIcon(self.style().standardIcon(
-            QStyle.StandardPixmap.SP_MediaPause if entry.visible
-            else QStyle.StandardPixmap.SP_MediaPlay))
+        self.show_button.setIcon(icon("eye-off" if entry.visible else "eye", size=16))
         self.lock_button.setText("Desbloquear cliques" if entry.locked else "Bloquear cliques")
+        self.lock_button.setIcon(icon("lock-keyhole-open" if entry.locked else "lock-keyhole", size=16))
         self.fit_combo.blockSignals(True)
         self.fit_combo.setCurrentIndex(self.fit_combo.findData(entry.fit_mode))
         self.fit_combo.blockSignals(False)
