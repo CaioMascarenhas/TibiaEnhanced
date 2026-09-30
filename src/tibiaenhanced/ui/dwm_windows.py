@@ -1,6 +1,8 @@
 """Seleção e visualização ao vivo por miniaturas DWM."""
 
+import ctypes
 import time
+from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QCloseEvent, QMouseEvent, QPaintEvent, QPainter, QPen
@@ -9,6 +11,44 @@ from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox, QW
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
 from tibiaenhanced.services.windowing import get_client_area
+
+
+_user32 = ctypes.WinDLL("user32", use_last_error=True)
+_user32.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
+_user32.GetWindowLongPtrW.restype = ctypes.c_ssize_t
+_user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
+_user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
+_user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int,
+                                 ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+_user32.SetWindowPos.restype = wintypes.BOOL
+
+_GWL_EXSTYLE = -20
+_WS_EX_TRANSPARENT = 0x00000020
+_WS_EX_LAYERED = 0x00080000
+_WS_EX_NOACTIVATE = 0x08000000
+_LOCK_STYLES = _WS_EX_TRANSPARENT | _WS_EX_LAYERED | _WS_EX_NOACTIVATE
+_SWP_NOSIZE = 0x0001
+_SWP_NOMOVE = 0x0002
+_SWP_NOZORDER = 0x0004
+_SWP_NOACTIVATE = 0x0010
+_SWP_FRAMECHANGED = 0x0020
+
+
+def destination_rect(source: tuple[int, int], target: tuple[int, int],
+                     fit_mode: str) -> tuple[int, int, int, int]:
+    """Calcula a área da miniatura em pixels, com bordas pretas quando necessário."""
+    source_w, source_h = source
+    target_w, target_h = target
+    if min(source_w, source_h, target_w, target_h) < 1:
+        raise ValueError("Dimensões do espelho precisam ser positivas")
+    if fit_mode == "stretch":
+        return (0, 0, target_w, target_h)
+    if fit_mode != "contain":
+        raise ValueError(f"Modo de ajuste desconhecido: {fit_mode}")
+    scale = min(target_w / source_w, target_h / source_h)
+    width = max(1, round(source_w * scale))
+    height = max(1, round(source_h * scale))
+    return ((target_w - width) // 2, (target_h - height) // 2, width, height)
 
 
 class _SelectionOverlay(QWidget):
@@ -38,6 +78,7 @@ class DwmRegionDialog(QDialog):
 
     def __init__(self, hwnd: int, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self._hwnd = hwnd
         self._mirror: DwmMirror | None = None
         self._overlay: _SelectionOverlay | None = None
@@ -146,10 +187,13 @@ class DwmRegionDialog(QDialog):
 class DwmMirrorWindow(QWidget):
     stopped = Signal(str)
 
-    def __init__(self, hwnd: int, region: Region) -> None:
+    def __init__(self, hwnd: int, region: Region, *, fit_mode: str = "contain") -> None:
         super().__init__()
         self._hwnd = hwnd
         self._region = region
+        self._fit_mode = fit_mode
+        self._locked = False
+        self._original_exstyle: int | None = None
         self._mirror: DwmMirror | None = None
         self._stop_reason = "Espelho fechado"
         self._started = time.perf_counter()
@@ -166,14 +210,59 @@ class DwmMirrorWindow(QWidget):
     def elapsed_seconds(self) -> float:
         return time.perf_counter() - self._started
 
+    @property
+    def active(self) -> bool:
+        return self._mirror is not None
+
+    @property
+    def locked(self) -> bool:
+        return self._locked
+
+    def rename(self, name: str) -> None:
+        self._region = Region(name, self._region.x, self._region.y,
+                              self._region.width, self._region.height)
+        self.setWindowTitle(f"Tibia Enhanced — {name}")
+
+    def set_fit_mode(self, mode: str) -> None:
+        if mode not in ("contain", "stretch"):
+            raise ValueError(f"Modo de ajuste desconhecido: {mode}")
+        self._fit_mode = mode
+        self._refresh()
+
+    def set_locked(self, locked: bool) -> None:
+        self._locked = locked
+        if self.isVisible():
+            self._apply_lock_style()
+
+    def _apply_lock_style(self) -> None:
+        hwnd = int(self.winId())
+        current = _user32.GetWindowLongPtrW(hwnd, _GWL_EXSTYLE)
+        if self._original_exstyle is None:
+            self._original_exstyle = current
+        desired = current | _LOCK_STYLES if self._locked else current & ~_LOCK_STYLES
+        if not self._locked:
+            desired |= self._original_exstyle & _LOCK_STYLES
+        if desired != current:
+            ctypes.set_last_error(0)
+            previous = _user32.SetWindowLongPtrW(hwnd, _GWL_EXSTYLE, desired)
+            if previous == 0 and ctypes.get_last_error():
+                raise RuntimeError("Não foi possível alterar o bloqueio do espelho")
+            if not _user32.SetWindowPos(hwnd, None, 0, 0, 0, 0,
+                                        _SWP_NOSIZE | _SWP_NOMOVE | _SWP_NOZORDER |
+                                        _SWP_NOACTIVATE | _SWP_FRAMECHANGED):
+                raise RuntimeError("Não foi possível atualizar o bloqueio do espelho")
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        self._stop_reason = "Espelho fechado"
+        self._started = time.perf_counter()
         QTimer.singleShot(0, self._start)
 
     def _start(self) -> None:
         if self._mirror is not None:
             return
         try:
+            self._apply_lock_style()
             self._mirror = DwmMirror(self._hwnd, int(self.winId()))
             self._refresh()
             self._timer.start()
@@ -186,8 +275,10 @@ class DwmMirrorWindow(QWidget):
             return
         try:
             ratio = self.devicePixelRatioF()
-            self._mirror.update(self._region, (0, 0, round(self.width() * ratio),
-                                               round(self.height() * ratio)))
+            target = (round(self.width() * ratio), round(self.height() * ratio))
+            box = destination_rect((self._region.width, self._region.height),
+                                   target, self._fit_mode)
+            self._mirror.update(self._region, box)
         except RuntimeError as exc:
             self._stop_reason = str(exc)
             self.close()

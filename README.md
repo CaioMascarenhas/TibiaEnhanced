@@ -11,13 +11,13 @@ Aplicativo desktop em Python para espelhar regiões visíveis da janela do Tibia
 
 ## Limites do aplicativo
 
-O aplicativo captura apenas a imagem exibida pelo sistema operacional. Ele não lê memória ou tráfego do cliente, não injeta código, não envia comandos ao Tibia e não executa ações do jogo automaticamente. A conformidade deve ser reavaliada conforme as regras oficiais da CipSoft antes da distribuição.
+O aplicativo espelha visualmente a imagem da janela pelo DWM do Windows. Ele não lê memória ou tráfego do cliente, não injeta código, não envia comandos ao Tibia e não executa ações do jogo automaticamente. A conformidade deve ser reavaliada conforme as regras oficiais da CipSoft antes da distribuição.
 
 ## Arquitetura proposta
 
 - **Interface:** Python e PySide6.
 - **Espelhamento:** miniaturas DWM do Windows, registradas e recortadas por Python; resultados dos testes em [docs/capture-spike.md](docs/capture-spike.md).
-- **Recortes:** uma captura da janela, compartilhada entre vários espelhos.
+- **Recortes:** várias miniaturas DWM podem apontar para a mesma janela de origem; não há cópia de quadros em Python.
 - **Alertas:** relógio monotônico e reprodução local de arquivos de áudio.
 - **Configurações:** arquivo local versionado por esquema, com migração quando necessário.
 
@@ -33,7 +33,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m tibiaenhanced
 ```
 
-O aplicativo também instala o comando `tibiaenhanced`. Na aba **Recortes**, escolha a janela do Tibia, clique em **Selecionar região**, arraste um retângulo na imagem e clique em **Iniciar prévia**. A aba **Alertas** será implementada na issue #4.
+O aplicativo também instala o comando `tibiaenhanced`. Na aba **Recortes**, escolha a janela do Tibia, clique em **Novo recorte**, arraste um retângulo no espelho e dê um nome. O recorte abre em uma janela flutuante. Repita para criar outros recortes da mesma origem. Na lista, use **Renomear**, **Ocultar/Mostrar**, **Bloquear/Desbloquear** ou **Excluir**. Arraste a janela para movê-la e use a borda para redimensionar. O modo **Preservar proporção** adiciona margens pretas quando necessário; **Preencher janela** estica a imagem. Um espelho bloqueado deixa os cliques atravessarem sua janela; desbloqueie pelo painel. A aba **Alertas** será implementada na issue #4.
 
 MSS, Windows Graphics Capture e DXGI retornaram preto para a área do jogo neste cliente. O espelho DWM é exibido diretamente pelo compositor em uma janela do aplicativo; ele não fornece quadros em memória para análise de imagem. Consulte [o relatório técnico](docs/capture-spike.md) para os resultados e limitações dos testes.
 
