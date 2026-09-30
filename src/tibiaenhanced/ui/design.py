@@ -66,6 +66,10 @@ class InteractionCursors(QObject):
 class CompactSlider(QSlider):
     """Trilho arredondado, mantendo teclado, arraste e acessibilidade do Qt."""
 
+    def __init__(self, orientation, parent=None, *, accent: str = "#ff940d") -> None:
+        super().__init__(orientation, parent)
+        self.accent = accent
+
     def paintEvent(self, event) -> None:
         option = QStyleOptionSlider()
         self.initStyleOption(option)
@@ -79,7 +83,7 @@ class CompactSlider(QSlider):
         x = handle.center().x()
         painter.setPen(QPen(QColor("#4b4e5e"), 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         painter.drawLine(QPointF(left, y), QPointF(right, y))
-        accent = QColor("#ff940d" if self.isEnabled() else "#666979")
+        accent = QColor(self.accent if self.isEnabled() else "#666979")
         painter.setPen(QPen(accent, 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         origin = right if option.upsideDown else left
         painter.drawLine(QPointF(origin, y), QPointF(x, y))
@@ -88,5 +92,5 @@ class CompactSlider(QSlider):
         painter.drawEllipse(QPointF(x, y), 5, 5)
         if self.hasFocus():
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(QColor("#ffd298"), 1))
+            painter.setPen(QPen(accent.lighter(140), 1))
             painter.drawEllipse(QPointF(x, y), 7, 7)

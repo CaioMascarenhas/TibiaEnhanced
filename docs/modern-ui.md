@@ -5,10 +5,11 @@ Interface PySide6 inspirada na densidade visual da referência TibiaVision: fund
 - **Exo 900** nos títulos e **Inter** nos textos e controles, distribuídas localmente com suas licenças OFL.
 - Ícones **Lucide** com tooltips e nomes acessíveis. Botões, abas, combos e sliders usam cursor de mão quando habilitados.
 - Recortes em grade, com mostrar/ocultar, bloqueio, exclusão e opacidade diretamente no card. O lápis abre as configurações detalhadas.
-- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho.
+- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio usam azul.
 - Sliders com trilho fino arredondado, mantendo interação nativa por teclado e arraste.
 - Barra de título própria com ícone, minimizar, maximizar e fechar; bordas redimensionáveis.
 - Rodapé “Feito por Mascarenhas”, com link para o GitHub do autor.
+- Diálogos de recorte, renomeação e temporizador usam cabeçalho próprio, cantos arredondados e texto branco com peso maior.
 
 ## Comparação visual
 
@@ -18,5 +19,7 @@ As imagens atuais são renderizações Qt com dados fictícios para os recortes.
 | --- | --- | --- |
 | Recortes | ![Recortes antes](images/ui-before.png) | ![Recortes depois](images/ui-after.png) |
 | Alertas | ![Alertas antes](images/ui-before-alertas.png) | ![Alertas depois](images/ui-after-alertas.png) |
+
+![Configuração do recorte](images/ui-dialog-capture.png) ![Configuração do temporizador](images/ui-dialog-timer.png)
 
 Os testes cobrem os controles independentes dos recortes, temporizadores, fontes, cursores, geometria e rolagem. A renderização offscreen não valida o arraste nativo da janela nem a captura DWM real do jogo.

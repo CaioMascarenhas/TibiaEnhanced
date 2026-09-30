@@ -2,7 +2,9 @@
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QScrollArea, QWidget
+
+from .dialog_shell import StyledDialog
 
 
 class _SelectionCanvas(QWidget):
@@ -58,13 +60,12 @@ class _SelectionCanvas(QWidget):
             painter.drawRect(self._selection)
 
 
-class RegionDialog(QDialog):
+class RegionDialog(StyledDialog):
     def __init__(self, image: QImage, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Selecionar região")
+        super().__init__(parent, "Selecionar região")
         self.resize(min(image.width() + 40, 1100), min(image.height() + 130, 800))
 
-        layout = QVBoxLayout(self)
+        layout = self.content_layout
         instruction = QLabel("Arraste sobre a imagem para marcar o recorte. As coordenadas são medidas em pixels da captura.")
         instruction.setWordWrap(True)
         layout.addWidget(instruction)

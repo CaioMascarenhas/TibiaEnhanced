@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from ..services.audio_timer import AudioTimer
 from .design import heading_font, icon
 from .design import CompactSlider as QSlider
+from .dialog_shell import StyledDialog
 
 
 ASSETS = Path(__file__).resolve().parents[1]
@@ -56,20 +57,13 @@ def _combined_image(paths: tuple[Path, ...]) -> QPixmap:
     return image
 
 
-class TimerDialog(QDialog):
+class TimerDialog(StyledDialog):
     def __init__(self, panel: AudioPanel, timer: AudioTimer | None = None) -> None:
-        super().__init__(panel)
+        super().__init__(panel, "Editar temporizador" if timer else "Novo timer")
         self.panel = panel
         self.timer = timer
-        self.setWindowTitle("Editar temporizador" if timer else "Novo timer")
-        self.setMinimumWidth(400)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 18, 20, 16)
-        layout.setSpacing(12)
-        heading = QLabel("Editar temporizador" if timer else "Novo timer")
-        heading.setObjectName("sectionTitle")
-        heading.setFont(heading_font(14))
-        layout.addWidget(heading)
+        self.setMinimumWidth(430)
+        layout = self.content_layout
         form = QFormLayout()
         form.setSpacing(9)
         self.name_input = QLineEdit(timer.name if timer else "")
@@ -85,7 +79,7 @@ class TimerDialog(QDialog):
         sound_row = QHBoxLayout()
         sound_row.addWidget(self.sound_input, 1)
         sound_row.addWidget(browse)
-        self.volume_input = QSlider(Qt.Orientation.Horizontal)
+        self.volume_input = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
         self.volume_input.setRange(0, 100)
         self.volume_input.setValue(round(timer.volume * 100) if timer else 100)
         self.loop_input = QCheckBox("Reiniciar automaticamente ao terminar")
@@ -189,7 +183,7 @@ class TimerCard(QFrame):
         volume_icon = QLabel()
         volume_icon.setPixmap(icon("volume-2", size=14).pixmap(14, 14))
         volume_row.addWidget(volume_icon)
-        self.volume = QSlider(Qt.Orientation.Horizontal)
+        self.volume = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
         self.volume.setRange(0, 100)
         self.volume.setValue(round(timer.volume * 100))
         self.volume.valueChanged.connect(self._set_volume)
@@ -328,7 +322,7 @@ class AudioPanel(QWidget):
         volume_icon.setPixmap(icon("volume-2", "#b6cfe3", 18).pixmap(18, 18))
         volume_row.addWidget(volume_icon)
         volume_row.addWidget(QLabel("Volume geral"))
-        self.master_volume = QSlider(Qt.Orientation.Horizontal)
+        self.master_volume = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
         self.master_volume.setRange(0, 100)
         self.master_volume.setValue(50)
         self.master_volume.setMaximumWidth(180)

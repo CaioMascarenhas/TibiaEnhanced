@@ -4,15 +4,16 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
-                               QInputDialog, QLabel, QMessageBox,
+                               QLabel, QLineEdit, QMessageBox,
                                QPushButton, QScrollArea,
                                QVBoxLayout, QWidget)
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.windowing import list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
-from .design import heading_font, icon
+from .design import icon
 from .design import CompactSlider as QSlider
+from .dialog_shell import StyledDialog
 
 
 @dataclass(slots=True)
@@ -85,18 +86,14 @@ class CapturePanel(QWidget):
         scroll.setWidget(container)
         layout.addWidget(scroll, 1)
 
-        self.details_dialog = QDialog(self)
-        self.details_dialog.setWindowTitle("Configurar recorte")
-        self.details_dialog.setMinimumWidth(370)
-        dialog_layout = QVBoxLayout(self.details_dialog)
+        self.details_dialog = StyledDialog(self, "Configurar recorte")
+        self.details_dialog.setMinimumWidth(390)
+        dialog_layout = self.details_dialog.content_layout
         detail_card = QFrame()
-        detail_card.setObjectName("card")
+        detail_card.setObjectName("dialogBody")
         detail_layout = QVBoxLayout(detail_card)
-        detail_layout.setContentsMargins(14, 11, 14, 11)
-        detail_layout.setSpacing(7)
-        detail_heading = QLabel("Configurar recorte")
-        detail_heading.setObjectName("sectionTitle")
-        detail_layout.addWidget(detail_heading)
+        detail_layout.setContentsMargins(0, 0, 0, 0)
+        detail_layout.setSpacing(9)
         self.selected_name = QLabel("Selecione um recorte na lista")
         self.selected_name.setObjectName("selectedTitle")
         self.selected_name.setWordWrap(True)
@@ -260,6 +257,7 @@ class CapturePanel(QWidget):
             card = QFrame()
             card.setObjectName("timerCard")
             card.setFixedHeight(84)
+            card.setMaximumWidth(320)
             box = QVBoxLayout(card)
             box.setContentsMargins(10, 8, 10, 8)
             box.setSpacing(5)
@@ -267,10 +265,12 @@ class CapturePanel(QWidget):
             title.setObjectName("sectionTitle")
             title.setToolTip(entry.region.name)
             box.addWidget(title)
-            source = QLabel(entry.source_title)
+            source = QLabel()
             source.setObjectName("mutedText")
             source.setToolTip(entry.source_title)
             source.setMaximumWidth(230)
+            source.setText(source.fontMetrics().elidedText(
+                entry.source_title, Qt.TextElideMode.ElideRight, 225))
             box.addWidget(source)
             actions = QHBoxLayout()
             actions.setSpacing(3)
@@ -361,14 +361,24 @@ class CapturePanel(QWidget):
             self._refresh_cards(entry.key)
 
     def _ask_name(self, title: str, initial: str) -> str | None:
-        dialog = QInputDialog(self)
-        dialog.setWindowTitle(title)
-        dialog.setLabelText("Nome do recorte")
-        dialog.setTextValue(initial)
-        dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        if dialog.exec() != QInputDialog.DialogCode.Accepted:
+        dialog = StyledDialog(self, title)
+        dialog.setMinimumWidth(340)
+        field = QLineEdit(initial)
+        field.setPlaceholderText("Nome do recorte")
+        dialog.content_layout.addWidget(field)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(dialog.reject)
+        save = QPushButton("Salvar")
+        save.setObjectName("primaryButton")
+        save.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(save)
+        dialog.content_layout.addLayout(actions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return None
-        return dialog.textValue().strip()
+        return field.text().strip()
 
     def _show_entry(self, entry: MirrorEntry) -> None:
         entry.window.show()

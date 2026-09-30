@@ -3,7 +3,7 @@
 
 def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> str:
     return f"""
-    QWidget {{ color: #eaf2fc; font-family: "{body_family}"; font-size: 9pt; }}
+    QWidget {{ color: #f1f3f8; font-family: "{body_family}"; font-size: 9pt; font-weight: 500; }}
     QMainWindow {{ background: transparent; }}
     QWidget#appPage {{ background: #1b1e24; }}
     QDialog, QMessageBox, QInputDialog {{ background: #202329; }}
@@ -20,11 +20,11 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     QLabel#selectedTitle {{ color: #ffffff; font-size: 11pt; }}
     QLabel#timerTitle {{ color: #f5f8ff; font-size: 11pt; }}
     QLabel#timerCountdown {{ color: #ffb454; font-size: 18pt; }}
-    QLabel#mutedText, QLabel#eyebrow {{ color: #9a9eae; }}
+    QLabel#mutedText, QLabel#eyebrow {{ color: #e4e8f1; font-weight: 600; }}
     QLabel#eyebrow {{ font-size: 8pt; font-weight: 700; padding-top: 4px; }}
     QLabel#stateBadge {{ font-size: 8pt; font-weight: 700; padding: 5px 9px; }}
     QLabel#statusText {{
-        color: #9296a4; background: #1b1e24;
+        color: #e4e8f1; background: #1b1e24;
         border: 1px solid #1b1e24; border-radius: 9px; padding: 6px 10px;
     }}
     QLabel#timerArt {{ background: #252839; border: 1px solid #35384a; border-radius: 10px; }}
@@ -34,13 +34,16 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
         background: #292c40; border: 1px solid #34374a; border-radius: 10px;
     }}
     QFrame#timerCard {{ border-left: 3px solid #ff940d; }}
+    QFrame#dialogSurface {{ background: #292c40; border: 1px solid #42465c; border-radius: 14px; }}
+    QFrame#dialogBody, QFrame#dialogHeader {{ background: transparent; border: 0; }}
+    QLabel#dialogTitle {{ color: #ffffff; font-family: "{heading_family}"; font-size: 13pt; font-weight: 900; }}
     QLabel#footerCredit {{ color: #969aa6; font-size: 8pt; }}
     QPushButton#iconButton {{ background: transparent; border: 0; padding: 2px; min-height: 0; border-radius: 5px; }}
     QPushButton#iconButton:hover {{ background: #45485a; }}
     QFrame#titleBar {{ background: transparent; border: 0; }}
 
     QPushButton, QToolButton {{
-        color: #e8f1fd; background: #30333e;
+        color: #ffffff; background: #30333e; font-weight: 700;
         border: 1px solid #41444f; border-radius: 9px;
         padding: 3px 8px; min-height: 18px;
     }}
@@ -55,7 +58,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     }}
     QPushButton#primaryButton:hover {{ background: #ffac3d; }}
     QPushButton#primaryButton:disabled {{ color: #637a89; background: #2c5868; border-color: #3b6a78; }}
-    QPushButton#dangerButton {{ color: #ffc6cb; background: #382635; border-color: #704352; }}
+    QPushButton#dangerButton {{ color: #ffffff; background: #4e2935; border-color: #ad6675; }}
     QPushButton#dangerButton:hover {{ background: #573241; border-color: #a95a69; }}
     QPushButton#chromeButton, QPushButton#chromeCloseButton {{
         background: transparent; border: 0; border-radius: 8px; padding: 3px; min-height: 0;
@@ -69,6 +72,8 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
         padding: 3px 8px; min-height: 18px;
         selection-background-color: #287497;
     }}
+    QComboBox, QLineEdit, QSpinBox, QKeySequenceEdit {{ font-weight: 600; }}
+    QSpinBox::up-button, QSpinBox::down-button {{ width: 0; border: 0; }}
     QComboBox:hover, QLineEdit:hover, QSpinBox:hover, QKeySequenceEdit:hover {{ border-color: #56718d; }}
     QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QKeySequenceEdit:focus {{ border: 1px solid #ff940d; }}
     QComboBox:disabled, QLineEdit:disabled, QSpinBox:disabled {{ color: #7d90a6; background: #182536; }}
@@ -117,7 +122,7 @@ def app_stylesheet(heading_family: str = "Exo", body_family: str = "Inter") -> s
     QTabWidget::pane {{ border: 0; background: #1b1e24; }}
     QTabBar {{ background: #1b1e24; }}
     QTabBar::tab {{
-        color: #a6a9b5; background: #24272f;
+        color: #e9edf5; background: #24272f;
         border: 1px solid #283b52; border-radius: 9px;
         padding: 5px 10px; margin: 2px 3px 3px 3px; min-width: 68px;
     }}

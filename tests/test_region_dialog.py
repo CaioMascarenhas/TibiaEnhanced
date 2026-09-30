@@ -2,6 +2,8 @@
 
 import os
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -11,6 +13,7 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from tibiaenhanced.ui.region_dialog import RegionDialog  # noqa: E402
+from tibiaenhanced.ui.dwm_windows import DwmRegionDialog  # noqa: E402
 
 
 class RegionDialogTests(unittest.TestCase):
@@ -29,6 +32,14 @@ class RegionDialogTests(unittest.TestCase):
         QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(70, 80))
         selection = dialog.selection
         self.assertEqual((selection.x(), selection.y(), selection.width(), selection.height()), (10, 20, 60, 60))
+        dialog.close()
+
+    def test_dwm_region_dialog_has_rounded_frameless_window(self) -> None:
+        with patch("tibiaenhanced.ui.dwm_windows.get_client_area",
+                   return_value=SimpleNamespace(width=800, height=600)):
+            dialog = DwmRegionDialog(42)
+        self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertFalse(dialog.mask().isEmpty())
         dialog.close()
 
 

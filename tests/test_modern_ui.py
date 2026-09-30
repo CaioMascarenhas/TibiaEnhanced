@@ -8,6 +8,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QPoint, Qt  # noqa: E402
 from PySide6.QtGui import QFontDatabase  # noqa: E402
 from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
+from tibiaenhanced.ui.dialog_shell import StyledDialog  # noqa: E402
+from tibiaenhanced.ui.audio_panel import TimerDialog, AudioPanel  # noqa: E402
+from tibiaenhanced.ui.capture_panel import CapturePanel  # noqa: E402
+from tibiaenhanced.ui.design import CompactSlider  # noqa: E402
 
 from tibiaenhanced.ui.design import ASSETS, InteractionCursors, heading_font, icon, load_fonts  # noqa: E402
 from tibiaenhanced.ui.main_window import MainWindow  # noqa: E402
@@ -57,6 +61,21 @@ class ModernUiTests(unittest.TestCase):
         button.setEnabled(True)
         self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
         self.app.removeEventFilter(cursors)
+
+    def test_settings_dialogs_share_rounded_chrome_and_audio_uses_blue(self) -> None:
+        panel = AudioPanel()
+        timer_dialog = TimerDialog(panel, panel.cards[0].timer)
+        self.assertIsInstance(timer_dialog, StyledDialog)
+        self.assertTrue(timer_dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertEqual(timer_dialog.volume_input.accent, "#4ba6ff")
+        self.assertEqual(panel.master_volume.accent, "#4ba6ff")
+        capture = CapturePanel()
+        self.assertIsInstance(capture.details_dialog, StyledDialog)
+        self.assertTrue(capture.details_dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertIsInstance(capture.transparency_slider, CompactSlider)
+        self.assertEqual(capture.transparency_slider.accent, "#ff940d")
+        panel.close()
+        capture.close()
 
 
 if __name__ == "__main__":
