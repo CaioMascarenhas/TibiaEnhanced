@@ -295,6 +295,8 @@ class CapturePanel(QWidget):
             slider.setMinimumWidth(45)
             value = QLabel(f"{slider.value()}%")
             value.setObjectName("mutedText")
+            value.setFixedWidth(value.fontMetrics().horizontalAdvance("100%") + 4)
+            value.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             slider.valueChanged.connect(lambda percent, key=entry.key, label=value: self._card_opacity(key, percent, label))
             actions.addWidget(slider, 1)
             actions.addWidget(value)
