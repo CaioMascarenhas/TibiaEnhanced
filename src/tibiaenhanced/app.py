@@ -1,8 +1,9 @@
 """Ponto de entrada único do aplicativo."""
 
 import sys
+from pathlib import Path
 
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
@@ -15,6 +16,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Tibia Enhanced")
     app.setOrganizationName("Tibia Enhanced")
+    app.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "imgs" / "iconapp_no_bg.png")))
     app.setStyle("Fusion")
     app.setFont(QFont("Segoe UI", 10))
     app.setStyleSheet(APP_STYLESHEET)

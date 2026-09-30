@@ -1,0 +1,384 @@
+"""Cards de alertas sonoros iniciados pelo usuário."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QKeySequence, QPainter, QPixmap, QShortcut
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtWidgets import (
+    QCheckBox, QDialog, QFileDialog, QFormLayout, QFrame, QHBoxLayout, QLabel,
+    QKeySequenceEdit, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSlider, QSpinBox,
+    QVBoxLayout, QWidget,
+)
+
+from ..services.audio_timer import AudioTimer
+
+
+ASSETS = Path(__file__).resolve().parents[1]
+DEFAULT_TIMERS = (
+    ("Foods 1h", 3600, ASSETS / "audios" / "foodacabou.mp3",
+     tuple(sorted((ASSETS / "imgs" / "foods_1hr").glob("*.png")))),
+    ("Potions 10min", 600, ASSETS / "audios" / "potionacabou.mp3",
+     tuple(sorted((ASSETS / "imgs" / "potions_10min").glob("*.png")))),
+)
+
+
+def _clock_text(seconds: int) -> str:
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours:02}:{minutes:02}:{secs:02}" if hours else f"{minutes:02}:{secs:02}"
+
+
+def _combined_image(paths: tuple[Path, ...]) -> QPixmap:
+    """Compõe os itens de uma categoria em uma imagem para o card."""
+    image = QPixmap(132, 82)
+    image.fill(QColor("#152536"))
+    painter = QPainter(image)
+    count = len(paths)
+    if count:
+        size = 58 if count <= 2 else 50
+        gap = 3
+        width = count * size + (count - 1) * gap
+        left = (image.width() - width) // 2
+        for index, path in enumerate(paths):
+            source = QPixmap(str(path))
+            if not source.isNull():
+                scaled = source.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
+                                       Qt.TransformationMode.SmoothTransformation)
+                x = left + index * (size + gap) + (size - scaled.width()) // 2
+                y = (image.height() - scaled.height()) // 2
+                painter.drawPixmap(x, y, scaled)
+    painter.end()
+    return image
+
+
+class TimerDialog(QDialog):
+    def __init__(self, panel: AudioPanel, timer: AudioTimer | None = None) -> None:
+        super().__init__(panel)
+        self.panel = panel
+        self.timer = timer
+        self.setWindowTitle("Editar temporizador" if timer else "Novo temporizador")
+        self.setMinimumWidth(430)
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.name_input = QLineEdit(timer.name if timer else "")
+        self.name_input.setPlaceholderText("Ex.: Boost")
+        self.duration_input = QSpinBox()
+        self.duration_input.setRange(1, 86400)
+        self.duration_input.setSuffix(" segundos")
+        self.duration_input.setValue(timer.duration_seconds if timer else 600)
+        self.sound_input = QLineEdit(str(timer.sound_file) if timer else "")
+        browse = QPushButton("Escolher…")
+        browse.clicked.connect(self._browse)
+        sound_row = QHBoxLayout()
+        sound_row.addWidget(self.sound_input, 1)
+        sound_row.addWidget(browse)
+        self.volume_input = QSlider(Qt.Orientation.Horizontal)
+        self.volume_input.setRange(0, 100)
+        self.volume_input.setValue(round(timer.volume * 100) if timer else 100)
+        self.loop_input = QCheckBox("Reiniciar automaticamente ao terminar")
+        self.loop_input.setChecked(timer.loop if timer else False)
+        self.shortcut_input = QKeySequenceEdit()
+        self.shortcut_input.setKeySequence(QKeySequence(timer.shortcut if timer else ""))
+        self.shortcut_input.setMaximumSequenceLength(1)
+        clear_shortcut = QPushButton("Limpar")
+        clear_shortcut.clicked.connect(self.shortcut_input.clear)
+        shortcut_row = QHBoxLayout()
+        shortcut_row.addWidget(self.shortcut_input, 1)
+        shortcut_row.addWidget(clear_shortcut)
+        form.addRow("Nome", self.name_input)
+        form.addRow("Duração", self.duration_input)
+        form.addRow("Som (.mp3/.wav)", sound_row)
+        form.addRow("Volume", self.volume_input)
+        form.addRow("Loop", self.loop_input)
+        form.addRow("Tecla para reiniciar", shortcut_row)
+        layout.addLayout(form)
+        hint = QLabel("O atalho funciona enquanto a janela do aplicativo está em foco.")
+        hint.setObjectName("mutedText")
+        layout.addWidget(hint)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(self.reject)
+        save = QPushButton("Salvar")
+        save.setObjectName("primaryButton")
+        save.clicked.connect(self._validate)
+        actions.addWidget(cancel)
+        actions.addWidget(save)
+        layout.addLayout(actions)
+
+    def _browse(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Selecionar áudio", "", "Áudio (*.mp3 *.wav)")
+        if path:
+            self.sound_input.setText(path)
+
+    def _validate(self) -> None:
+        path = Path(self.sound_input.text().strip())
+        if not self.name_input.text().strip():
+            QMessageBox.warning(self, "Nome obrigatório", "Informe um nome para o temporizador.")
+        elif path.suffix.lower() not in {".mp3", ".wav"} or not path.is_file():
+            QMessageBox.warning(self, "Áudio inválido", "Escolha um arquivo .mp3 ou .wav existente.")
+        elif self.panel.shortcut_conflict(self.shortcut_input.keySequence(), self.timer):
+            QMessageBox.warning(self, "Atalho em uso", "Essa tecla já está vinculada a outro temporizador.")
+        else:
+            self.accept()
+
+
+class TimerCard(QFrame):
+    def __init__(self, timer: AudioTimer, panel: AudioPanel) -> None:
+        super().__init__()
+        self.timer = timer
+        self.panel = panel
+        self.setObjectName("timerCard")
+        self.audio_output = QAudioOutput(self)
+        self.player = QMediaPlayer(self)
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile(str(timer.sound_file.resolve())))
+        self.shortcut_binding = QShortcut(self)
+        self.shortcut_binding.setContext(Qt.ShortcutContext.WindowShortcut)
+        self.shortcut_binding.setAutoRepeat(False)
+        self.shortcut_binding.activated.connect(self._restart_and_start)
+        self._update_shortcut()
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(14, 13, 14, 13)
+        row.setSpacing(16)
+        self.art = QLabel()
+        self.art.setObjectName("timerArt")
+        self.art.setFixedSize(132, 82)
+        self.art.setPixmap(_combined_image(timer.images))
+        row.addWidget(self.art)
+
+        details = QVBoxLayout()
+        self.title = QLabel(timer.name)
+        self.title.setObjectName("timerTitle")
+        self.countdown = QLabel()
+        self.countdown.setObjectName("timerCountdown")
+        self.status = QLabel()
+        self.status.setObjectName("mutedText")
+        details.addWidget(self.title)
+        details.addWidget(self.countdown)
+        details.addWidget(self.status)
+        row.addLayout(details, 1)
+
+        controls = QVBoxLayout()
+        buttons = QHBoxLayout()
+        self.start_button = QPushButton("Iniciar")
+        self.start_button.setObjectName("primaryButton")
+        self.start_button.clicked.connect(self._toggle)
+        reset = QPushButton("Reiniciar")
+        reset.clicked.connect(self._reset)
+        test = QPushButton("Testar som")
+        test.clicked.connect(self.play_sound)
+        buttons.addWidget(self.start_button)
+        buttons.addWidget(reset)
+        buttons.addWidget(test)
+        controls.addLayout(buttons)
+        volume_row = QHBoxLayout()
+        volume_row.addWidget(QLabel("Volume"))
+        self.volume = QSlider(Qt.Orientation.Horizontal)
+        self.volume.setRange(0, 100)
+        self.volume.setValue(round(timer.volume * 100))
+        self.volume.valueChanged.connect(self._set_volume)
+        volume_row.addWidget(self.volume, 1)
+        self.volume_label = QLabel()
+        volume_row.addWidget(self.volume_label)
+        controls.addLayout(volume_row)
+        options_row = QHBoxLayout()
+        self.loop_check = QCheckBox("Reiniciar em loop")
+        self.loop_check.setChecked(timer.loop)
+        self.loop_check.toggled.connect(self._set_loop)
+        options_row.addWidget(self.loop_check)
+        self.shortcut_label = QLabel()
+        self.shortcut_label.setObjectName("mutedText")
+        options_row.addWidget(self.shortcut_label)
+        controls.addLayout(options_row)
+        edit_row = QHBoxLayout()
+        edit_row.addStretch()
+        edit = QPushButton("Editar")
+        edit.clicked.connect(self._edit)
+        delete = QPushButton("Excluir")
+        delete.setObjectName("dangerButton")
+        delete.clicked.connect(lambda: panel.remove_card(self))
+        edit_row.addWidget(edit)
+        edit_row.addWidget(delete)
+        controls.addLayout(edit_row)
+        row.addLayout(controls)
+        self._update_shortcut()
+        self.refresh()
+
+    def _set_loop(self, enabled: bool) -> None:
+        self.timer.loop = enabled
+
+    def _update_shortcut(self) -> None:
+        self.shortcut_binding.setKey(QKeySequence(self.timer.shortcut))
+        self.shortcut_binding.setEnabled(bool(self.timer.shortcut))
+        if hasattr(self, "shortcut_label"):
+            self.shortcut_label.setText(
+                f"Atalho: {self.timer.shortcut}" if self.timer.shortcut else "Sem atalho"
+            )
+
+    def _restart_and_start(self) -> None:
+        self.timer.reset()
+        self.timer.start()
+        self.refresh()
+
+    def _set_volume(self, value: int) -> None:
+        self.timer.volume = value / 100
+        self.volume_label.setText(f"{value}%")
+        self.panel.update_audio_volumes()
+
+    def _toggle(self) -> None:
+        if self.timer.running:
+            self.timer.pause()
+        else:
+            self.timer.start()
+        self.refresh()
+
+    def _reset(self) -> None:
+        self.timer.reset()
+        self.refresh()
+
+    def _edit(self) -> None:
+        dialog = TimerDialog(self.panel, self.timer)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.timer.name = dialog.name_input.text().strip()
+        self.timer.duration_seconds = dialog.duration_input.value()
+        self.timer.sound_file = Path(dialog.sound_input.text().strip())
+        self.timer.volume = dialog.volume_input.value() / 100
+        self.timer.loop = dialog.loop_input.isChecked()
+        self.timer.shortcut = dialog.shortcut_input.keySequence().toString(
+            QKeySequence.SequenceFormat.PortableText
+        )
+        self.timer.reset()
+        self.player.setSource(QUrl.fromLocalFile(str(self.timer.sound_file.resolve())))
+        self.title.setText(self.timer.name)
+        self.volume.setValue(dialog.volume_input.value())
+        self.loop_check.setChecked(self.timer.loop)
+        self._update_shortcut()
+        self.refresh()
+
+    def play_sound(self) -> None:
+        self.player.stop()
+        self.player.play()
+
+    def refresh(self) -> None:
+        self.countdown.setText(_clock_text(self.timer.remaining()))
+        if self.timer.running:
+            self.status.setText("Em andamento")
+            self.start_button.setText("Pausar")
+        elif self.timer.finished:
+            self.status.setText("Concluído")
+            self.start_button.setText("Iniciar")
+        elif self.timer.remaining() < self.timer.duration_seconds:
+            self.status.setText("Pausado")
+            self.start_button.setText("Retomar")
+        else:
+            self.status.setText("Pronto")
+            self.start_button.setText("Iniciar")
+
+
+class AudioPanel(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("appPage")
+        self.cards: list[TimerCard] = []
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(14)
+        heading = QHBoxLayout()
+        title = QLabel("Temporizadores de áudio")
+        title.setObjectName("pageTitle")
+        heading.addWidget(title)
+        heading.addStretch()
+        create = QPushButton("+ Novo temporizador")
+        create.setObjectName("primaryButton")
+        create.clicked.connect(self._create)
+        heading.addWidget(create)
+        layout.addLayout(heading)
+        intro = QLabel("Inicie os avisos manualmente. Cada card funciona de forma independente.")
+        intro.setObjectName("mutedText")
+        layout.addWidget(intro)
+
+        volume_row = QHBoxLayout()
+        volume_row.addWidget(QLabel("Volume geral"))
+        self.master_volume = QSlider(Qt.Orientation.Horizontal)
+        self.master_volume.setRange(0, 100)
+        self.master_volume.setValue(50)
+        self.master_volume.setMaximumWidth(180)
+        self.master_volume.valueChanged.connect(self.update_audio_volumes)
+        volume_row.addWidget(self.master_volume)
+        self.master_label = QLabel()
+        volume_row.addWidget(self.master_label)
+        volume_row.addStretch()
+        layout.addLayout(volume_row)
+
+        scroll = QScrollArea()
+        scroll.setObjectName("detailsScroll")
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        container.setObjectName("appPage")
+        self.card_layout = QVBoxLayout(container)
+        self.card_layout.setContentsMargins(0, 0, 8, 0)
+        self.card_layout.setSpacing(12)
+        self.card_layout.addStretch()
+        scroll.setWidget(container)
+        layout.addWidget(scroll, 1)
+
+        for name, duration, sound, images in DEFAULT_TIMERS:
+            self.add_timer(AudioTimer(name, duration, sound, images=images))
+        self.update_audio_volumes()
+        self.ticker = QTimer(self)
+        self.ticker.setInterval(200)
+        self.ticker.timeout.connect(self._tick)
+        self.ticker.start()
+
+    def add_timer(self, timer: AudioTimer) -> TimerCard:
+        if self.shortcut_conflict(QKeySequence(timer.shortcut)):
+            raise ValueError("Atalho já usado por outro temporizador")
+        card = TimerCard(timer, self)
+        self.cards.append(card)
+        self.card_layout.insertWidget(self.card_layout.count() - 1, card)
+        self.update_audio_volumes()
+        return card
+
+    def remove_card(self, card: TimerCard) -> None:
+        card.timer.reset()
+        card.player.stop()
+        self.cards.remove(card)
+        self.card_layout.removeWidget(card)
+        card.deleteLater()
+
+    def _create(self) -> None:
+        dialog = TimerDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.add_timer(AudioTimer(
+                dialog.name_input.text().strip(), dialog.duration_input.value(),
+                Path(dialog.sound_input.text().strip()), dialog.volume_input.value() / 100,
+                loop=dialog.loop_input.isChecked(),
+                shortcut=dialog.shortcut_input.keySequence().toString(
+                    QKeySequence.SequenceFormat.PortableText
+                ),
+            ))
+
+    def shortcut_conflict(self, sequence: QKeySequence, editing: AudioTimer | None = None) -> bool:
+        if sequence.isEmpty():
+            return False
+        return any(
+            card.timer is not editing and QKeySequence(card.timer.shortcut) == sequence
+            for card in self.cards
+        )
+
+    def update_audio_volumes(self) -> None:
+        self.master_label.setText(f"{self.master_volume.value()}%")
+        for card in self.cards:
+            card.audio_output.setVolume(self.master_volume.value() / 100 * card.timer.volume)
+
+    def _tick(self) -> None:
+        for card in self.cards:
+            if card.timer.tick():
+                card.play_sound()
+            card.refresh()
