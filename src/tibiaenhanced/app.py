@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
-from .ui.design import load_fonts
+from .ui.design import InteractionCursors, load_fonts
 from .ui.theme import app_stylesheet
 from .services.windowing import enable_per_monitor_dpi_awareness
 
@@ -20,7 +20,9 @@ def main() -> int:
     app.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "imgs" / "iconapp_no_bg.png")))
     app.setStyle("Fusion")
     heading_family, body_family = load_fonts()
-    app.setFont(QFont(body_family, 10))
+    app.setFont(QFont(body_family, 9))
+    cursors = InteractionCursors(app)
+    app.installEventFilter(cursors)
     app.setStyleSheet(app_stylesheet(heading_family, body_family))
 
     window = MainWindow()

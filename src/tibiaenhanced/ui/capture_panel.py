@@ -3,16 +3,16 @@
 from dataclasses import dataclass
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtWidgets import (QComboBox, QFrame, QGridLayout, QHBoxLayout,
-                               QHeaderView, QInputDialog, QLabel, QMessageBox,
-                               QPushButton, QScrollArea, QSlider, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
+                               QInputDialog, QLabel, QMessageBox,
+                               QPushButton, QScrollArea,
+                               QVBoxLayout, QWidget)
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.windowing import list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
 from .design import heading_font, icon
+from .design import CompactSlider as QSlider
 
 
 @dataclass(slots=True)
@@ -33,6 +33,8 @@ class CapturePanel(QWidget):
         super().__init__(parent)
         self.setObjectName("appPage")
         self._entries: dict[int, MirrorEntry] = {}
+        self._selected_key = None
+        self._cards = {}
         self._next_key = 1
         self._shutting_down = False
         self._build_ui()
@@ -41,31 +43,16 @@ class CapturePanel(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(10)
 
-        title = QLabel("Espelhos")
-        title.setObjectName("pageTitle")
-        title.setFont(heading_font(19))
-        layout.addWidget(title)
-        subtitle = QLabel("Organize as áreas do Tibia que você quer acompanhar durante o jogo.")
-        subtitle.setObjectName("mutedText")
-        layout.addWidget(subtitle)
-
-        source_card = QFrame()
-        source_card.setObjectName("card")
-        source_layout = QVBoxLayout(source_card)
-        source_layout.setContentsMargins(14, 11, 14, 11)
-        source_layout.setSpacing(7)
-        source_heading = QLabel("1  Janela de origem")
-        source_heading.setObjectName("sectionTitle")
-        source_layout.addWidget(source_heading)
         source_row = QHBoxLayout()
-        source_row.setSpacing(8)
+        source_row.setSpacing(6)
         self.window_combo = QComboBox()
         self.window_combo.setToolTip("Escolha a janela que será espelhada")
         source_row.addWidget(self.window_combo, 1)
-        refresh_button = QPushButton("Atualizar")
+        refresh_button = QPushButton()
+        refresh_button.setFixedWidth(30)
         refresh_button.setIcon(icon("refresh-cw", size=16))
         refresh_button.setIconSize(QSize(16, 16))
         refresh_button.setToolTip("Atualizar a lista de janelas abertas")
@@ -78,40 +65,36 @@ class CapturePanel(QWidget):
         self.add_button.setToolTip("Escolher uma área e criar um espelho")
         self.add_button.clicked.connect(self.add_mirror)
         source_row.addWidget(self.add_button)
-        source_layout.addLayout(source_row)
-        layout.addWidget(source_card)
-
-        columns = QHBoxLayout()
-        columns.setSpacing(10)
-
-        list_card = QFrame()
-        list_card.setObjectName("card")
-        list_layout = QVBoxLayout(list_card)
-        list_layout.setContentsMargins(14, 11, 14, 11)
-        list_layout.setSpacing(7)
-        list_heading = QLabel("2  Janelas e recortes")
-        list_heading.setObjectName("sectionTitle")
-        list_layout.addWidget(list_heading)
-        self.mirror_tree = QTreeWidget()
-        self.mirror_tree.setHeaderLabels(["ORIGEM / RECORTE", "ESTADO"])
-        self.mirror_tree.setRootIsDecorated(True)
-        self.mirror_tree.setIndentation(22)
-        self.mirror_tree.setMinimumWidth(300)
-        self.mirror_tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.mirror_tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.mirror_tree.itemSelectionChanged.connect(self._update_controls)
-        list_layout.addWidget(self.mirror_tree, 1)
+        layout.addLayout(source_row)
         self.count_label = QLabel("Nenhum recorte criado")
         self.count_label.setObjectName("mutedText")
-        list_layout.addWidget(self.count_label)
-        columns.addWidget(list_card, 11)
+        layout.addWidget(self.count_label)
+        scroll = QScrollArea()
+        scroll.setObjectName("detailsScroll")
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        container.setObjectName("appPage")
+        self.card_grid = QGridLayout(container)
+        self.card_grid.setContentsMargins(0, 0, 4, 0)
+        self.card_grid.setSpacing(7)
+        self.card_grid.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.empty_label = QLabel("Seus recortes aparecem aqui.\nEscolha uma janela e clique em Novo recorte.")
+        self.empty_label.setObjectName("mutedText")
+        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.card_grid.addWidget(self.empty_label, 0, 0)
+        scroll.setWidget(container)
+        layout.addWidget(scroll, 1)
 
+        self.details_dialog = QDialog(self)
+        self.details_dialog.setWindowTitle("Configurar recorte")
+        self.details_dialog.setMinimumWidth(370)
+        dialog_layout = QVBoxLayout(self.details_dialog)
         detail_card = QFrame()
         detail_card.setObjectName("card")
         detail_layout = QVBoxLayout(detail_card)
         detail_layout.setContentsMargins(14, 11, 14, 11)
         detail_layout.setSpacing(7)
-        detail_heading = QLabel("3  Recorte selecionado")
+        detail_heading = QLabel("Configurar recorte")
         detail_heading.setObjectName("sectionTitle")
         detail_layout.addWidget(detail_heading)
         self.selected_name = QLabel("Selecione um recorte na lista")
@@ -176,14 +159,11 @@ class CapturePanel(QWidget):
         hint.setWordWrap(True)
         detail_layout.addWidget(hint)
         detail_layout.addStretch()
-        detail_scroll = QScrollArea()
-        detail_scroll.setObjectName("detailsScroll")
-        detail_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        detail_scroll.setWidgetResizable(True)
-        detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        detail_scroll.setWidget(detail_card)
-        columns.addWidget(detail_scroll, 9)
-        layout.addLayout(columns, 1)
+        dialog_layout.addWidget(detail_card)
+        done = QPushButton("Concluir")
+        done.setObjectName("primaryButton")
+        done.clicked.connect(self.details_dialog.accept)
+        dialog_layout.addWidget(done)
 
         self.status_label = QLabel("Escolha uma janela acima e crie seu primeiro recorte.")
         self.status_label.setObjectName("statusText")
@@ -234,57 +214,102 @@ class CapturePanel(QWidget):
                                self._on_mirror_stopped(mirror_key, message))
         entry = MirrorEntry(key, hwnd, source_title, region, mirror)
         self._entries[key] = entry
-        self._refresh_tree(key)
+        self._refresh_cards(key)
         self._show_entry(entry)
 
     def _current_entry(self) -> MirrorEntry | None:
-        item = self.mirror_tree.currentItem()
-        if item is None:
-            return None
-        return self._entries.get(item.data(0, Qt.ItemDataRole.UserRole))
+        return self._entries.get(self._selected_key)
 
-    def _refresh_tree(self, selected_key: int | None = None) -> None:
-        if selected_key is None:
-            current = self._current_entry()
-            selected_key = current.key if current else None
-        self.mirror_tree.blockSignals(True)
-        self.mirror_tree.clear()
-        roots: dict[int, QTreeWidgetItem] = {}
-        selected_item: QTreeWidgetItem | None = None
-        first_child: QTreeWidgetItem | None = None
-        for entry in self._entries.values():
-            root = roots.get(entry.source_hwnd)
-            if root is None:
-                root = QTreeWidgetItem(self.mirror_tree, [entry.source_title, "ORIGEM"])
-                root.setIcon(0, icon("monitor", "#8bdcf2", 16))
-                root.setFlags(root.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-                font = QFont(root.font(0))
-                font.setBold(True)
-                root.setFont(0, font)
-                root.setForeground(0, QColor("#a2e8f6"))
-                root.setExpanded(True)
-                roots[entry.source_hwnd] = root
-            state = "VISÍVEL" if entry.visible else "OCULTO"
-            if entry.locked:
-                state += " · TRAVADO"
-            child = QTreeWidgetItem(root, [entry.region.name, state])
-            child.setIcon(0, icon("eye" if entry.visible else "eye-off", "#a4c4dc", 16))
-            child.setData(0, Qt.ItemDataRole.UserRole, entry.key)
-            child.setToolTip(0, f"{entry.region.width} × {entry.region.height} px")
-            child.setForeground(1, QColor("#7ed7b0" if entry.visible else "#aeb9c7"))
-            if first_child is None:
-                first_child = child
-            if entry.key == selected_key:
-                selected_item = child
-        self.mirror_tree.setCurrentItem(selected_item or first_child)
-        self.mirror_tree.blockSignals(False)
-        visible_count = sum(entry.visible for entry in self._entries.values())
-        count = len(self._entries)
-        self.count_label.setText(
-            f"{count} recorte{'s' if count != 1 else ''}  ·  "
-            f"{visible_count} {'visível' if visible_count == 1 else 'visíveis'}"
-            if count else "Nenhum recorte criado")
+    def _select_entry(self, key: int) -> None:
+        self._selected_key = key
         self._update_controls()
+
+    def _card_action(self, key: int, action) -> None:
+        self._select_entry(key)
+        action()
+
+    def _edit_entry(self) -> None:
+        self.details_dialog.exec()
+        self._refresh_cards()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._position_cards()
+
+    def _position_cards(self) -> None:
+        columns = max(1, self.width() // 260)
+        for index, card in enumerate(self._cards.values()):
+            self.card_grid.removeWidget(card)
+            self.card_grid.addWidget(card, index // columns, index % columns)
+        rows = (len(self._cards) + columns - 1) // columns
+        self.card_grid.parentWidget().setMinimumHeight(max(0, rows * 91 - 7))
+
+    def _refresh_cards(self, selected_key: int | None = None) -> None:
+        # Refresh the card collection after a mirror changes state.
+        if selected_key is not None:
+            self._selected_key = selected_key
+        if self._selected_key not in self._entries:
+            self._selected_key = next(iter(self._entries), None)
+        for card in self._cards.values():
+            self.card_grid.removeWidget(card)
+            card.hide()
+            card.deleteLater()
+        self._cards.clear()
+        self.empty_label.setVisible(not self._entries)
+        for entry in self._entries.values():
+            card = QFrame()
+            card.setObjectName("timerCard")
+            card.setFixedHeight(84)
+            box = QVBoxLayout(card)
+            box.setContentsMargins(10, 8, 10, 8)
+            box.setSpacing(5)
+            title = QLabel(entry.region.name)
+            title.setObjectName("sectionTitle")
+            title.setToolTip(entry.region.name)
+            box.addWidget(title)
+            source = QLabel(entry.source_title)
+            source.setObjectName("mutedText")
+            source.setToolTip(entry.source_title)
+            source.setMaximumWidth(230)
+            box.addWidget(source)
+            actions = QHBoxLayout()
+            actions.setSpacing(3)
+            for name, tooltip, callback in (
+                ("pencil", "Configurar recorte", self._edit_entry),
+                ("eye" if entry.visible else "eye-off", "Ocultar" if entry.visible else "Mostrar", self.toggle_visibility),
+                ("lock-keyhole" if entry.locked else "lock-keyhole-open", "Desbloquear" if entry.locked else "Bloquear cliques", self.toggle_lock),
+                ("trash", "Excluir recorte", self.delete_current),
+            ):
+                button = QPushButton()
+                button.setObjectName("iconButton")
+                button.setFixedSize(24, 24)
+                button.setIcon(icon(name, size=14))
+                button.setToolTip(tooltip)
+                button.setAccessibleName(tooltip)
+                button.clicked.connect(lambda checked=False, key=entry.key, fn=callback: self._card_action(key, fn))
+                actions.addWidget(button)
+            slider = QSlider(Qt.Orientation.Horizontal)
+            slider.setRange(10, 100)
+            slider.setValue(100 - entry.transparency_percent)
+            slider.setToolTip("Opacidade do recorte")
+            slider.setMinimumWidth(45)
+            value = QLabel(f"{slider.value()}%")
+            value.setObjectName("mutedText")
+            slider.valueChanged.connect(lambda percent, key=entry.key, label=value: self._card_opacity(key, percent, label))
+            actions.addWidget(slider, 1)
+            actions.addWidget(value)
+            box.addLayout(actions)
+            self._cards[entry.key] = card
+        self._position_cards()
+        count = len(self._entries)
+        visible = sum(entry.visible for entry in self._entries.values())
+        self.count_label.setText(f"{visible}/{count} visíveis" if count else "Nenhum recorte criado")
+        self._update_controls()
+
+    def _card_opacity(self, key: int, percent: int, label: QLabel) -> None:
+        self._select_entry(key)
+        self._change_transparency(100 - percent)
+        label.setText(f"{percent}%")
 
     def _update_controls(self) -> None:
         self.add_button.setEnabled(self.window_combo.currentData() is not None)
@@ -333,7 +358,7 @@ class CapturePanel(QWidget):
             entry.region = Region(name, entry.region.x, entry.region.y,
                                   entry.region.width, entry.region.height)
             entry.window.rename(name)
-            self._refresh_tree(entry.key)
+            self._refresh_cards(entry.key)
 
     def _ask_name(self, title: str, initial: str) -> str | None:
         dialog = QInputDialog(self)
@@ -349,7 +374,7 @@ class CapturePanel(QWidget):
         entry.window.show()
         entry.visible = True
         self.status_label.setText(f"{entry.region.name} está visível.")
-        self._refresh_tree(entry.key)
+        self._refresh_cards(entry.key)
 
     def toggle_visibility(self) -> None:
         entry = self._current_entry()
@@ -370,7 +395,7 @@ class CapturePanel(QWidget):
             QMessageBox.warning(self, "Bloqueio indisponível", str(exc))
             return
         entry.locked = entry.window.locked
-        self._refresh_tree(entry.key)
+        self._refresh_cards(entry.key)
         self.status_label.setText(
             "Cliques atravessam o espelho. Desbloqueie pelo painel."
             if entry.locked else "Espelho desbloqueado: arraste a imagem ou as bordas.")
@@ -399,7 +424,8 @@ class CapturePanel(QWidget):
         del self._entries[entry.key]
         entry.window.close()
         entry.window.deleteLater()
-        self._refresh_tree()
+        self.details_dialog.accept()
+        self._refresh_cards()
         self.status_label.setText(f"{entry.region.name} foi excluído.")
 
     def _on_mirror_stopped(self, key: int, message: str) -> None:
@@ -407,7 +433,7 @@ class CapturePanel(QWidget):
         if entry is None or self._shutting_down:
             return
         entry.visible = False
-        self._refresh_tree(key)
+        self._refresh_cards(key)
         self.status_label.setText(f"{entry.region.name}: {message}")
 
     def shutdown(self) -> bool:

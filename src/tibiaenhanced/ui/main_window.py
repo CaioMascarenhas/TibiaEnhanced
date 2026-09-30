@@ -30,28 +30,25 @@ class TitleBar(QFrame):
         self.window = window
         self._drag_origin: QPoint | None = None
         self.setObjectName("titleBar")
-        self.setFixedHeight(58)
+        self.setFixedHeight(44)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 5, 11, 5)
         layout.setSpacing(9)
 
         emblem = QLabel()
         emblem.setObjectName("brandIcon")
-        emblem.setFixedSize(44, 44)
+        emblem.setFixedSize(30, 30)
         emblem.setAlignment(Qt.AlignmentFlag.AlignCenter)
         emblem.setPixmap(QPixmap(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png"))
-                         .scaled(36, 36, Qt.AspectRatioMode.KeepAspectRatio,
+                         .scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
                                  Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(emblem)
         brand = QVBoxLayout()
         brand.setSpacing(0)
-        title = QLabel("TIBIA ENHANCED")
+        title = QLabel("Tibia Enhanced")
         title.setObjectName("brandTitle")
         title.setFont(heading_font(16))
-        subtitle = QLabel("DESKTOP COMPANION")
-        subtitle.setObjectName("brandSubtitle")
         brand.addWidget(title)
-        brand.addWidget(subtitle)
         layout.addLayout(brand)
         layout.addStretch()
 
@@ -119,8 +116,8 @@ class MainWindow(QMainWindow):
         self.setMouseTracking(True)
         self.setWindowTitle("Tibia Enhanced")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png")))
-        self.resize(960, 680)
-        self.setMinimumSize(800, 600)
+        self.resize(680, 460)
+        self.setMinimumSize(560, 380)
         self._title_bar = TitleBar(self)
         self.setMenuWidget(self._title_bar)
 
@@ -138,7 +135,18 @@ class MainWindow(QMainWindow):
         )
         self.setCentralWidget(tabs)
         self.statusBar().setSizeGripEnabled(False)
-        self.statusBar().showMessage("Pronto para configurar")
+        self.author_link = QLabel(
+            'Feito por <a href="https://github.com/CaioMascarenhas" '
+            'style="color: #ff9b31; text-decoration: none;">Mascarenhas</a>'
+        )
+        self.author_link.setObjectName("footerCredit")
+        self.author_link.setOpenExternalLinks(True)
+        self.author_link.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse |
+            Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        )
+        self.author_link.setContentsMargins(10, 3, 8, 5)
+        self.statusBar().addWidget(self.author_link)
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self._setup_tray()
@@ -149,8 +157,8 @@ class MainWindow(QMainWindow):
         inset = 0 if self.isMaximized() else 6
         radius = 0 if self.isMaximized() else 17
         rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
-        painter.setPen(QPen(QColor("#344860"), 1))
-        painter.setBrush(QColor("#0e1727"))
+        painter.setPen(QPen(QColor("#34363e"), 1))
+        painter.setBrush(QColor("#1b1e24"))
         painter.drawRoundedRect(rect, radius, radius)
         super().paintEvent(event)
 
