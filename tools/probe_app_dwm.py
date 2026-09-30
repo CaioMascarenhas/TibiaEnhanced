@@ -2,6 +2,7 @@
 
 import time
 import sys
+import ctypes
 
 import mss
 from PySide6.QtCore import QPoint, QTimer, Qt
@@ -48,14 +49,25 @@ def main() -> None:
         if dialog._mirror is None:
             raise RuntimeError("DWM não abriu no seletor")
         display = dialog._display
-        overlay = dialog._overlay
-        if overlay is None:
-            raise RuntimeError("Camada de seleção não abriu")
-        QTest.mousePress(overlay, Qt.MouseButton.LeftButton,
-                         pos=QPoint(20, 20))
-        QTest.mouseMove(overlay, QPoint(220, 160))
-        QTest.mouseRelease(overlay, Qt.MouseButton.LeftButton,
-                           pos=QPoint(220, 160))
+        if "--native-mouse" in sys.argv:
+            user32 = ctypes.WinDLL("user32")
+            start = dialog.mapToGlobal(QPoint(display.x() + 20, display.y() + 20))
+            user32.SetCursorPos(start.x(), start.y())
+            QTest.qWait(100)
+            user32.mouse_event(0x0002, 0, 0, 0, 0)
+            for step in range(1, 11):
+                point = dialog.mapToGlobal(QPoint(display.x() + 20 + 20 * step,
+                                                  display.y() + 20 + 14 * step))
+                user32.SetCursorPos(point.x(), point.y())
+                QTest.qWait(40)
+            user32.mouse_event(0x0004, 0, 0, 0, 0)
+            QTest.qWait(100)
+        else:
+            QTest.mousePress(dialog, Qt.MouseButton.LeftButton,
+                             pos=QPoint(display.x() + 20, display.y() + 20))
+            QTest.mouseMove(dialog, QPoint(display.x() + 220, display.y() + 160))
+            QTest.mouseRelease(dialog, Qt.MouseButton.LeftButton,
+                               pos=QPoint(display.x() + 220, display.y() + 160))
         app.processEvents()
         r = dialog._display
         print({"selector_nonblack": visible_nonblack(int(dialog.winId()),

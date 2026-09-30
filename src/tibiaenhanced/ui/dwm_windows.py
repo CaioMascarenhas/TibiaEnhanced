@@ -12,41 +12,17 @@ from tibiaenhanced.services.windowing import get_client_area
 
 
 class _SelectionOverlay(QWidget):
-    selection_changed = Signal(QRect)
-
     def __init__(self, owner: QDialog, bounds: QRect) -> None:
         super().__init__(owner, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
-                         Qt.WindowType.WindowStaysOnTopHint)
+                         Qt.WindowType.WindowStaysOnTopHint |
+                         Qt.WindowType.WindowTransparentForInput)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setMouseTracking(True)
-        self.setCursor(Qt.CursorShape.CrossCursor)
-        self._start: QPoint | None = None
         self._selection = QRect()
         self.setGeometry(QRect(owner.mapToGlobal(bounds.topLeft()), bounds.size()))
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._start = event.position().toPoint()
-            self._selection = QRect()
-            self.update()
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self._start is None:
-            return
-        end = event.position().toPoint()
-        end = QPoint(max(0, min(end.x(), self.width())),
-                     max(0, min(end.y(), self.height())))
-        self._selection = QRect(min(self._start.x(), end.x()),
-                                min(self._start.y(), end.y()),
-                                abs(end.x() - self._start.x()),
-                                abs(end.y() - self._start.y()))
-        self.selection_changed.emit(self._selection)
+    def set_selection(self, rect: QRect) -> None:
+        self._selection = rect
         self.update()
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and self._start is not None:
-            self.mouseMoveEvent(event)
-            self._start = None
 
     def paintEvent(self, _event: QPaintEvent) -> None:
         if self._selection.isEmpty():
@@ -65,6 +41,7 @@ class DwmRegionDialog(QDialog):
         self._hwnd = hwnd
         self._mirror: DwmMirror | None = None
         self._overlay: _SelectionOverlay | None = None
+        self._start: QPoint | None = None
         self._selected = QRect()
         self._source_size = (1, 1)
         area = get_client_area(hwnd)
@@ -84,6 +61,7 @@ class DwmRegionDialog(QDialog):
         self._ok.setEnabled(False)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
+        self.setCursor(Qt.CursorShape.CrossCursor)
 
     @property
     def selection(self) -> QRect:
@@ -98,7 +76,6 @@ class DwmRegionDialog(QDialog):
             self._mirror = DwmMirror(self._hwnd, int(self.winId()))
             self._update_mirror()
             self._overlay = _SelectionOverlay(self, self._display)
-            self._overlay.selection_changed.connect(self._on_overlay_selection)
             self._overlay.show()
         except RuntimeError as exc:
             QMessageBox.warning(self, "Espelho indisponível", str(exc))
@@ -125,6 +102,31 @@ class DwmRegionDialog(QDialog):
         self._ok.setEnabled(self._selected.width() >= 4 and self._selected.height() >= 4)
         self._coordinates.setText(
             f"x={x}, y={y}, {self._selected.width()} × {self._selected.height()} px")
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self._display.contains(event.position().toPoint()):
+            self._start = event.position().toPoint() - self._display.topLeft()
+            if self._overlay is not None:
+                self._overlay.set_selection(QRect())
+            self._selected = QRect()
+            self._ok.setEnabled(False)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._start is None:
+            return
+        point = event.position().toPoint() - self._display.topLeft()
+        point = QPoint(max(0, min(point.x(), self._display.width())),
+                       max(0, min(point.y(), self._display.height())))
+        rect = QRect(min(self._start.x(), point.x()), min(self._start.y(), point.y()),
+                     abs(point.x() - self._start.x()), abs(point.y() - self._start.y()))
+        if self._overlay is not None:
+            self._overlay.set_selection(rect)
+        self._on_overlay_selection(rect)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self._start is not None:
+            self.mouseMoveEvent(event)
+            self._start = None
 
     def moveEvent(self, event) -> None:
         super().moveEvent(event)
