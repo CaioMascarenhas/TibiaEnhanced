@@ -21,6 +21,7 @@ class _FakeWindow(QObject):
         self.active = False
         self.locked = False
         self.fit_mode = "contain"
+        self.opacity_percent = 100
 
     def show(self) -> None:
         self.active = True
@@ -34,6 +35,9 @@ class _FakeWindow(QObject):
 
     def set_fit_mode(self, mode: str) -> None:
         self.fit_mode = mode
+
+    def set_opacity_percent(self, percent: int) -> None:
+        self.opacity_percent = percent
 
     def rename(self, _name: str) -> None:
         pass
@@ -65,6 +69,9 @@ class MirrorManagementTests(unittest.TestCase):
         panel.toggle_lock()
         self.assertTrue(first_window.locked)
         self.assertFalse(second_window.locked)
+        panel.transparency_slider.setValue(45)
+        self.assertEqual(first_window.opacity_percent, 55)
+        self.assertEqual(second_window.opacity_percent, 100)
         panel.toggle_visibility()
         self.assertFalse(first_window.active)
         self.assertTrue(second_window.active)

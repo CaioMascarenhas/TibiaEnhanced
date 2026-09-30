@@ -193,15 +193,21 @@ class DwmMirrorWindow(QWidget):
         self._region = region
         self._fit_mode = fit_mode
         self._locked = False
+        self._opacity_percent = 100
         self._original_exstyle: int | None = None
+        self._drag_origin: QPoint | None = None
+        self._drag_geometry: QRect | None = None
+        self._resize_edges = Qt.Edges()
         self._mirror: DwmMirror | None = None
         self._stop_reason = "Espelho fechado"
         self._started = time.perf_counter()
         self.setWindowTitle(f"Tibia Enhanced — {region.name}")
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.resize(max(180, region.width), max(120, region.height))
         self.setMinimumSize(100, 80)
         self.setStyleSheet("background: black")
+        self.setMouseTracking(True)
         self._timer = QTimer(self)
         self._timer.setInterval(500)
         self._timer.timeout.connect(self._refresh)
@@ -217,6 +223,10 @@ class DwmMirrorWindow(QWidget):
     @property
     def locked(self) -> bool:
         return self._locked
+
+    @property
+    def opacity_percent(self) -> int:
+        return self._opacity_percent
 
     def rename(self, name: str) -> None:
         self._region = Region(name, self._region.x, self._region.y,
@@ -234,14 +244,25 @@ class DwmMirrorWindow(QWidget):
         if self.isVisible():
             self._apply_lock_style()
 
+    def set_opacity_percent(self, percent: int) -> None:
+        if not 10 <= percent <= 100:
+            raise ValueError("A transparência deve estar entre 10% e 100%")
+        self._opacity_percent = percent
+        self.setWindowOpacity(percent / 100)
+        if self.isVisible():
+            self._apply_lock_style()
+
     def _apply_lock_style(self) -> None:
         hwnd = int(self.winId())
         current = _user32.GetWindowLongPtrW(hwnd, _GWL_EXSTYLE)
         if self._original_exstyle is None:
             self._original_exstyle = current
-        desired = current | _LOCK_STYLES if self._locked else current & ~_LOCK_STYLES
-        if not self._locked:
-            desired |= self._original_exstyle & _LOCK_STYLES
+        if self._locked:
+            desired = current | _LOCK_STYLES
+        else:
+            desired = current & ~(_WS_EX_TRANSPARENT | _WS_EX_NOACTIVATE)
+            if self._opacity_percent == 100 and not self._original_exstyle & _WS_EX_LAYERED:
+                desired &= ~_WS_EX_LAYERED
         if desired != current:
             ctypes.set_last_error(0)
             previous = _user32.SetWindowLongPtrW(hwnd, _GWL_EXSTYLE, desired)
@@ -286,6 +307,75 @@ class DwmMirrorWindow(QWidget):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._refresh()
+
+    def _edges_at(self, point: QPoint) -> Qt.Edges:
+        margin = 9
+        edges = Qt.Edges()
+        if point.x() < margin:
+            edges |= Qt.Edge.LeftEdge
+        elif point.x() >= self.width() - margin:
+            edges |= Qt.Edge.RightEdge
+        if point.y() < margin:
+            edges |= Qt.Edge.TopEdge
+        elif point.y() >= self.height() - margin:
+            edges |= Qt.Edge.BottomEdge
+        return edges
+
+    def _update_edge_cursor(self, edges: Qt.Edges) -> None:
+        if edges in (Qt.Edge.LeftEdge | Qt.Edge.TopEdge,
+                     Qt.Edge.RightEdge | Qt.Edge.BottomEdge):
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif edges in (Qt.Edge.RightEdge | Qt.Edge.TopEdge,
+                       Qt.Edge.LeftEdge | Qt.Edge.BottomEdge):
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        elif edges & (Qt.Edge.LeftEdge | Qt.Edge.RightEdge):
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif edges & (Qt.Edge.TopEdge | Qt.Edge.BottomEdge):
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        else:
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() != Qt.MouseButton.LeftButton or self._locked:
+            return
+        edges = self._edges_at(event.position().toPoint())
+        self._resize_edges = edges
+        handle = self.windowHandle()
+        if handle is not None:
+            started = handle.startSystemResize(edges) if edges else handle.startSystemMove()
+            if started:
+                event.accept()
+                return
+        self._drag_origin = event.globalPosition().toPoint()
+        self._drag_geometry = self.geometry()
+        event.accept()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._drag_origin is None or self._drag_geometry is None:
+            if not self._locked:
+                self._update_edge_cursor(self._edges_at(event.position().toPoint()))
+            return
+        delta = event.globalPosition().toPoint() - self._drag_origin
+        initial = self._drag_geometry
+        if not self._resize_edges:
+            self.move(initial.topLeft() + delta)
+            return
+        left, top, right, bottom = initial.left(), initial.top(), initial.right(), initial.bottom()
+        if self._resize_edges & Qt.Edge.LeftEdge:
+            left = min(left + delta.x(), right - self.minimumWidth() + 1)
+        if self._resize_edges & Qt.Edge.RightEdge:
+            right = max(right + delta.x(), left + self.minimumWidth() - 1)
+        if self._resize_edges & Qt.Edge.TopEdge:
+            top = min(top + delta.y(), bottom - self.minimumHeight() + 1)
+        if self._resize_edges & Qt.Edge.BottomEdge:
+            bottom = max(bottom + delta.y(), top + self.minimumHeight() - 1)
+        self.setGeometry(QRect(QPoint(left, top), QPoint(right, bottom)))
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_origin = None
+            self._drag_geometry = None
+            self._resize_edges = Qt.Edges()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self._timer.stop()

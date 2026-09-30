@@ -1,10 +1,11 @@
 """Teste manual de dois recortes DWM e clique através de janela bloqueada."""
 
 import ctypes
+import threading
 import time
 
 import mss
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QPoint, QTimer
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton, QWidget
@@ -61,6 +62,35 @@ def main() -> None:
         print({"red": center_color(int(red.winId())),
                "blue": center_color(int(blue.winId())),
                "active": (red.active, blue.active)}, flush=True)
+
+        def drag(start: QPoint, dx: int, dy: int) -> None:
+            def worker() -> None:
+                user32.SetCursorPos(start.x(), start.y())
+                time.sleep(0.1)
+                user32.mouse_event(0x0002, 0, 0, 0, 0)
+                for step in range(1, 9):
+                    user32.SetCursorPos(start.x() + dx * step // 8,
+                                        start.y() + dy * step // 8)
+                    time.sleep(0.04)
+                user32.mouse_event(0x0004, 0, 0, 0, 0)
+
+            thread = threading.Thread(target=worker)
+            thread.start()
+            QTest.qWait(800)
+            thread.join(timeout=1)
+
+        before = blue.geometry()
+        drag(blue.mapToGlobal(QPoint(blue.width() // 2, blue.height() // 2)), 70, 40)
+        after_move = blue.geometry()
+        drag(blue.mapToGlobal(QPoint(blue.width() - 4, blue.height() - 4)), 60, 30)
+        after_resize = blue.geometry()
+        print({"move_delta": (after_move.x() - before.x(), after_move.y() - before.y()),
+               "resize_delta": (after_resize.width() - after_move.width(),
+                                after_resize.height() - after_move.height())}, flush=True)
+        red.set_opacity_percent(50)
+        QTest.qWait(200)
+        print({"red_half_opacity": center_color(int(red.winId())),
+               "window_opacity": red.windowOpacity()}, flush=True)
         red.set_locked(True)
         QTest.qWait(200)
         print({"red_locked": center_color(int(red.winId())),

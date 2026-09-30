@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QInputDialog, QLabel,
                                QListWidget, QListWidgetItem, QMessageBox,
-                               QPushButton, QVBoxLayout, QWidget)
+                               QPushButton, QSlider, QVBoxLayout, QWidget)
 
 from tibiaenhanced.models import Region
 from tibiaenhanced.services.windowing import list_windows
@@ -23,6 +23,7 @@ class MirrorEntry:
     visible: bool = False
     locked: bool = False
     fit_mode: str = "contain"
+    transparency_percent: int = 0
 
 
 class CapturePanel(QWidget):
@@ -81,12 +82,24 @@ class CapturePanel(QWidget):
         fit_row.addStretch()
         layout.addLayout(fit_row)
 
+        opacity_row = QHBoxLayout()
+        self.transparency_label = QLabel("Transparência: 0%")
+        opacity_row.addWidget(self.transparency_label)
+        self.transparency_slider = QSlider(Qt.Orientation.Horizontal)
+        self.transparency_slider.setRange(0, 90)
+        self.transparency_slider.setSingleStep(5)
+        self.transparency_slider.setPageStep(10)
+        self.transparency_slider.setTickInterval(10)
+        self.transparency_slider.valueChanged.connect(self._change_transparency)
+        opacity_row.addWidget(self.transparency_slider, 1)
+        layout.addLayout(opacity_row)
+
         self.status_label = QLabel("Escolha a janela do Tibia e crie um recorte.")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
         self.metric_label = QLabel("Espelhos ativos: 0  |  CPU do aplicativo: —")
         layout.addWidget(self.metric_label)
-        hint = QLabel("Arraste a janela do espelho para mover e use a borda para redimensionar. "
+        hint = QLabel("Arraste a imagem do espelho para mover e use as bordas para redimensionar. "
                       "Ao bloquear, os cliques atravessam o espelho; desbloqueie pelo painel.")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -181,7 +194,7 @@ class CapturePanel(QWidget):
         entry = self._current_entry()
         enabled = entry is not None
         for button in (self.rename_button, self.show_button, self.lock_button,
-                       self.delete_button, self.fit_combo):
+                       self.delete_button, self.fit_combo, self.transparency_slider):
             button.setEnabled(enabled)
         if entry is not None:
             self.show_button.setText("Ocultar" if entry.visible else "Mostrar")
@@ -189,6 +202,12 @@ class CapturePanel(QWidget):
             self.fit_combo.blockSignals(True)
             self.fit_combo.setCurrentIndex(self.fit_combo.findData(entry.fit_mode))
             self.fit_combo.blockSignals(False)
+            self.transparency_slider.blockSignals(True)
+            self.transparency_slider.setValue(entry.transparency_percent)
+            self.transparency_slider.blockSignals(False)
+            self.transparency_label.setText(f"Transparência: {entry.transparency_percent}%")
+        else:
+            self.transparency_label.setText("Transparência: —")
 
     def rename_current(self) -> None:
         entry = self._current_entry()
@@ -250,6 +269,14 @@ class CapturePanel(QWidget):
         if mode is not None:
             entry.fit_mode = mode
             entry.window.set_fit_mode(mode)
+
+    def _change_transparency(self, percent: int) -> None:
+        entry = self._current_entry()
+        if entry is None:
+            return
+        entry.transparency_percent = percent
+        entry.window.set_opacity_percent(100 - percent)
+        self.transparency_label.setText(f"Transparência: {percent}%")
 
     def delete_current(self) -> None:
         entry = self._current_entry()
