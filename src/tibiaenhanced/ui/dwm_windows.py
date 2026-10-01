@@ -163,6 +163,7 @@ class DwmRegionDialog(QDialog):
         self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
         self._ok.setText("Criar espelho")
         self._ok.setEnabled(False)
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         self.setCursor(Qt.CursorShape.CrossCursor)
