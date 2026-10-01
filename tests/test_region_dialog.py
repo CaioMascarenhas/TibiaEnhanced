@@ -7,13 +7,14 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QPoint, Qt  # noqa: E402
+from PySide6.QtCore import QPoint, QRect, Qt  # noqa: E402
 from PySide6.QtGui import QImage  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from tibiaenhanced.ui.region_dialog import RegionDialog  # noqa: E402
-from tibiaenhanced.ui.dwm_windows import DwmRegionDialog  # noqa: E402
+from tibiaenhanced.ui.dwm_windows import DwmMirrorWindow, DwmRegionDialog  # noqa: E402
+from tibiaenhanced.models import Region  # noqa: E402
 
 
 class RegionDialogTests(unittest.TestCase):
@@ -41,6 +42,38 @@ class RegionDialogTests(unittest.TestCase):
         self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
         self.assertFalse(dialog.mask().isEmpty())
         dialog.close()
+
+    def test_zoom_and_pan_keep_selection_in_source_coordinates(self) -> None:
+        with patch("tibiaenhanced.ui.dwm_windows.get_client_area",
+                   return_value=SimpleNamespace(width=800, height=600)):
+            dialog = DwmRegionDialog(42)
+        dialog._set_zoom(2.0)
+        view = dialog._view_region()
+        self.assertEqual((view.x, view.y, view.width, view.height), (200, 150, 400, 300))
+        dialog._on_overlay_selection(QRect(0, 0, dialog._display.width() // 2,
+                                           dialog._display.height() // 2))
+        selected = dialog.selection
+        self.assertEqual((selected.x(), selected.y()), (200, 150))
+        self.assertAlmostEqual(selected.width(), 200, delta=1)
+        self.assertAlmostEqual(selected.height(), 150, delta=1)
+        dialog._view_x = 400
+        dialog._view_y = 300
+        dialog._on_overlay_selection(QRect(0, 0, dialog._display.width(), dialog._display.height()))
+        selected = dialog.selection
+        self.assertEqual((selected.x(), selected.y(), selected.width(), selected.height()),
+                         (400, 300, 400, 300))
+        dialog.close()
+
+    def test_mirror_context_menu_emits_requested_actions(self) -> None:
+        window = DwmMirrorWindow(42, Region("Teste", 0, 0, 100, 100))
+        received = []
+        window.action_requested.connect(received.append)
+        menu = window._context_menu()
+        for action in menu.actions():
+            if not action.isSeparator():
+                action.trigger()
+        self.assertEqual(received, ["hide", "lock", "delete"])
+        window.close()
 
 
 if __name__ == "__main__":
