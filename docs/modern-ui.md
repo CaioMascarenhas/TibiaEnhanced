@@ -1,12 +1,12 @@
 # Redesign visual da issue #9
 
-Interface PySide6 inspirada na densidade visual da referência TibiaVision: fundo grafite, cards violeta escuro, destaques azuis e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo.
+Interface PySide6 com fundo grafite, cards neutros, destaque em verde água e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo. A versão azul anterior permanece nas capturas para comparação.
 
-- **Exo 900** nos títulos e **Inter** nos textos e controles, distribuídas localmente com suas licenças OFL.
+- **Space Grotesk 700** nos títulos e **DM Sans** nos textos e controles, distribuídas localmente com suas licenças OFL.
 - Ícones **Lucide** com tooltips e nomes acessíveis. Botões, abas, combos e sliders usam cursor de mão quando habilitados.
 - Recortes em grade, com mostrar/ocultar, bloqueio, exclusão e opacidade diretamente no card. O lápis abre as configurações detalhadas.
 - O seletor de janela de origem mostra seta, instrução e nomes abreviados quando longos; o nome completo fica no tooltip e a lista aberta respeita a largura do campo.
-- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio e de recortes usam tons de azul.
+- Temporizadores em grade adaptável, com iniciar/pausar, volume, loop, teste de som e edição do atalho. Os sliders de áudio e de recortes usam verde água.
 - O Loop usa um interruptor sem contorno, com trilho azul, botão circular, transição de 170 ms e resposta visual ao hover, clique e foco. Foods e Potions são temporizadores padrão e não podem ser excluídos; apenas os timers criados pelo usuário mostram a ação de excluir.
 - Sliders com trilho fino arredondado, mantendo interação nativa por teclado e arraste.
 - Botões principais, cards e trilhos de volume respondem ao hover com transições curtas; os percentuais têm largura reservada para a barra não mudar de tamanho.
@@ -18,10 +18,12 @@ Interface PySide6 inspirada na densidade visual da referência TibiaVision: fund
 
 As imagens atuais são renderizações Qt com dados fictícios para os recortes. As imagens anteriores usaram Quicksand apenas para permitir a leitura no renderizador; a versão original usava Segoe UI.
 
-| Tela | Antes | Depois |
+| Tela | Azul anterior | Experimento verde água |
 | --- | --- | --- |
-| Recortes | ![Recortes antes](images/ui-before.png) | ![Recortes depois](images/ui-after.png) |
-| Alertas | ![Alertas antes](images/ui-before-alertas.png) | ![Alertas depois](images/ui-after-alertas.png) |
+| Recortes | ![Recortes azul](images/ui-after.png) | ![Recortes verde água](images/ui-experiment-recortes.png) |
+| Alertas | ![Alertas azul](images/ui-after-alertas.png) | ![Alertas verde água](images/ui-experiment-alertas.png) |
+
+![Diálogo no experimento](images/ui-experiment-dialog.png)
 
 ![Configuração do recorte](images/ui-dialog-capture.png) ![Configuração do temporizador](images/ui-dialog-timer.png)
 

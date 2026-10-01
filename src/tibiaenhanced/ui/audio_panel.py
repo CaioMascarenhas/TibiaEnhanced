@@ -17,6 +17,7 @@ from ..services.audio_timer import AudioTimer
 from .design import ToggleCheckBox, heading_font, icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
+from .palette import ACCENT
 
 
 ASSETS = Path(__file__).resolve().parents[1]
@@ -79,7 +80,7 @@ class TimerDialog(StyledDialog):
         sound_row = QHBoxLayout()
         sound_row.addWidget(self.sound_input, 1)
         sound_row.addWidget(browse)
-        self.volume_input = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
+        self.volume_input = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
         self.volume_input.setRange(0, 100)
         self.volume_input.setValue(round(timer.volume * 100) if timer else 100)
         self.loop_input = ToggleCheckBox("Reiniciar automaticamente")
@@ -185,7 +186,7 @@ class TimerCard(QFrame):
         volume_icon = QLabel()
         volume_icon.setPixmap(icon("volume-2", size=14).pixmap(14, 14))
         volume_row.addWidget(volume_icon)
-        self.volume = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
+        self.volume = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
         self.volume.setRange(0, 100)
         self.volume.setValue(round(timer.volume * 100))
         self.volume.valueChanged.connect(self._set_volume)
@@ -328,7 +329,7 @@ class AudioPanel(QWidget):
         volume_icon.setPixmap(icon("volume-2", "#b6cfe3", 18).pixmap(18, 18))
         volume_row.addWidget(volume_icon)
         volume_row.addWidget(QLabel("Volume geral"))
-        self.master_volume = QSlider(Qt.Orientation.Horizontal, accent="#4ba6ff")
+        self.master_volume = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
         self.master_volume.setRange(0, 100)
         self.master_volume.setValue(50)
         self.master_volume.setMaximumWidth(180)
