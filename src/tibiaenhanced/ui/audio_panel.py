@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -229,6 +229,7 @@ class TimerCard(QFrame):
 
     def _set_loop(self, enabled: bool) -> None:
         self.timer.loop = enabled
+        self.panel.changed.emit()
 
     def _update_shortcut(self) -> None:
         self.shortcut_binding.setKey(QKeySequence(self.timer.shortcut))
@@ -247,6 +248,7 @@ class TimerCard(QFrame):
         self.timer.volume = value / 100
         self.volume_label.setText(f"{value}%")
         self.panel.update_audio_volumes()
+        self.panel.changed.emit()
 
     def _toggle(self) -> None:
         if self.timer.running:
@@ -278,6 +280,7 @@ class TimerCard(QFrame):
         self.loop_check.setChecked(self.timer.loop)
         self._update_shortcut()
         self.refresh()
+        self.panel.changed.emit()
 
     def play_sound(self) -> None:
         self.player.stop()
@@ -304,8 +307,11 @@ class TimerCard(QFrame):
 
 
 class AudioPanel(QWidget):
+    changed = Signal()
+
     def __init__(self) -> None:
         super().__init__()
+        self._loading = False
         self.setObjectName("appPage")
         self.cards: list[TimerCard] = []
         layout = QVBoxLayout(self)
@@ -334,6 +340,7 @@ class AudioPanel(QWidget):
         self.master_volume.setValue(50)
         self.master_volume.setMaximumWidth(180)
         self.master_volume.valueChanged.connect(self.update_audio_volumes)
+        self.master_volume.valueChanged.connect(lambda _value: self.changed.emit())
         volume_row.addWidget(self.master_volume)
         self.master_label = QLabel()
         self.master_label.setFixedWidth(self.master_label.fontMetrics().horizontalAdvance("100%") + 4)
@@ -369,6 +376,8 @@ class AudioPanel(QWidget):
         self.cards.append(card)
         self._reflow_cards()
         self.update_audio_volumes()
+        if not self._loading:
+            self.changed.emit()
         return card
 
     def remove_card(self, card: TimerCard) -> None:
@@ -380,6 +389,8 @@ class AudioPanel(QWidget):
         self.card_layout.removeWidget(card)
         card.deleteLater()
         self._reflow_cards()
+        if not self._loading:
+            self.changed.emit()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -424,3 +435,99 @@ class AudioPanel(QWidget):
             if card.timer.tick():
                 card.play_sound()
             card.refresh()
+
+    def export_state(self) -> dict:
+        timers = []
+        for index, card in enumerate(self.cards):
+            timer = card.timer
+            timers.append({
+                "default_id": index if not card.removable else None,
+                "name": timer.name,
+                "duration_seconds": timer.duration_seconds,
+                "sound_file": str(timer.sound_file.resolve()),
+                "volume": timer.volume,
+                "loop": timer.loop,
+                "shortcut": timer.shortcut,
+            })
+        return {"master_volume": self.master_volume.value(), "timers": timers}
+
+    def load_state(self, state: dict) -> list[str]:
+        warnings = []
+        if not isinstance(state, dict):
+            state = {}
+            warnings.append("Configuração de alertas inválida; valores padrão restaurados.")
+        records = state.get("timers", [])
+        if not isinstance(records, list):
+            records = []
+            warnings.append("Lista de alertas inválida; valores padrão restaurados.")
+        self._loading = True
+        try:
+            for card in self.cards:
+                card.timer.reset()
+                card.player.stop()
+                card.shortcut_binding.setEnabled(False)
+                self.card_layout.removeWidget(card)
+                card.deleteLater()
+            self.cards.clear()
+            defaults = {record["default_id"]: record for record in records
+                        if isinstance(record, dict) and type(record.get("default_id")) is int
+                        and record["default_id"] in range(len(DEFAULT_TIMERS))}
+            for index, (name, duration, sound, images) in enumerate(DEFAULT_TIMERS):
+                timer = AudioTimer(name, duration, sound, images=images)
+                record = defaults.get(index)
+                if record is not None:
+                    warnings.extend(self._restore_timer_fields(timer, record))
+                self.add_timer(timer, removable=False)
+            for record in records:
+                if not isinstance(record, dict):
+                    warnings.append("Um alerta inválido foi ignorado.")
+                    continue
+                if record.get("default_id") is not None:
+                    continue
+                try:
+                    timer = AudioTimer("", 1, Path(""))
+                    issues = self._restore_timer_fields(timer, record)
+                    if any("inválid" in issue for issue in issues):
+                        warnings.extend(issues)
+                        continue
+                    warnings.extend(issues)
+                    self.add_timer(timer)
+                except (ValueError, TypeError):
+                    warnings.append("Um alerta inválido foi ignorado.")
+            volume = state.get("master_volume", 50)
+            if type(volume) is not int or not 0 <= volume <= 100:
+                warnings.append("Volume geral inválido; usado 50%.")
+                volume = 50
+            self.master_volume.setValue(volume)
+            self.update_audio_volumes()
+        finally:
+            self._loading = False
+        return warnings
+
+    def _restore_timer_fields(self, timer: AudioTimer, record: dict) -> list[str]:
+        name = record.get("name")
+        duration = record.get("duration_seconds")
+        sound = record.get("sound_file")
+        volume = record.get("volume")
+        loop = record.get("loop")
+        shortcut = record.get("shortcut", "")
+        if (not isinstance(name, str) or not name.strip() or
+                type(duration) is not int or not 1 <= duration <= 86400 or
+                not isinstance(sound, str) or Path(sound).suffix.lower() not in (".mp3", ".wav") or
+                type(volume) not in (int, float) or not 0 <= volume <= 1 or
+                type(loop) is not bool or not isinstance(shortcut, str)):
+            return ["Um alerta tem configuração inválida."]
+        timer.name = name.strip()
+        timer.duration_seconds = duration
+        timer.sound_file = Path(sound)
+        timer.volume = float(volume)
+        timer.loop = loop
+        timer.shortcut = shortcut
+        timer.reset()
+        warnings = []
+        if not timer.sound_file.is_file():
+            warnings.append(f"Áudio ausente em {timer.name}: {sound}. Edite o temporizador para escolher outro.")
+        if self.shortcut_conflict(QKeySequence(shortcut)):
+            timer.shortcut = ""
+            warnings.append(f"Atalho duplicado em {timer.name}; atalho removido.")
+        return warnings

@@ -34,6 +34,8 @@ user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
 user32.GetWindowTextW.restype = ctypes.c_int
 user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
 user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+user32.GetClassNameW.restype = ctypes.c_int
 user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(_Rect)]
 user32.GetClientRect.restype = wintypes.BOOL
 user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(_Point)]
@@ -43,12 +45,39 @@ user32.GetWindowDisplayAffinity.restype = wintypes.BOOL
 
 WDA_MONITOR = 0x00000001
 WDA_EXCLUDEFROMCAPTURE = 0x00000011
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+_kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+_kernel32.OpenProcess.restype = wintypes.HANDLE
+_kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD,
+                                                  wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+_kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+_kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+_kernel32.CloseHandle.restype = wintypes.BOOL
 
 
 @dataclass(frozen=True, slots=True)
 class WindowInfo:
     hwnd: int
     title: str
+    executable: str = ""
+    window_class: str = ""
+
+
+def _window_identity(hwnd: int, process_id: int) -> tuple[str, str]:
+    class_buffer = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, class_buffer, len(class_buffer))
+    executable = ""
+    process = _kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
+    if process:
+        try:
+            path = ctypes.create_unicode_buffer(32768)
+            length = wintypes.DWORD(len(path))
+            if _kernel32.QueryFullProcessImageNameW(process, 0, path, ctypes.byref(length)):
+                executable = os.path.basename(path.value).casefold()
+        finally:
+            _kernel32.CloseHandle(process)
+    return executable, class_buffer.value
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +125,8 @@ def list_windows() -> list[WindowInfo]:
         title = ctypes.create_unicode_buffer(title_length + 1)
         user32.GetWindowTextW(hwnd, title, len(title))
         if title.value:
-            windows.append(WindowInfo(int(hwnd), title.value))
+            executable, window_class = _window_identity(int(hwnd), owner_pid.value)
+            windows.append(WindowInfo(int(hwnd), title.value, executable, window_class))
         return True
 
     user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]

@@ -355,6 +355,7 @@ class DwmRegionDialog(QDialog):
 class DwmMirrorWindow(QWidget):
     stopped = Signal(str)
     action_requested = Signal(str)
+    geometry_changed = Signal()
 
     def __init__(self, hwnd: int, region: Region, *, fit_mode: str = "contain") -> None:
         super().__init__()
@@ -476,6 +477,11 @@ class DwmMirrorWindow(QWidget):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._refresh()
+        self.geometry_changed.emit()
+
+    def moveEvent(self, event) -> None:
+        super().moveEvent(event)
+        self.geometry_changed.emit()
 
     def _edges_at(self, point: QPoint) -> Qt.Edges:
         margin = min(9, max(4, min(self.width(), self.height()) // 6))

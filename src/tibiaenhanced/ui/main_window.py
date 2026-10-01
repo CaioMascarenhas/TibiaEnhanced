@@ -4,15 +4,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QPoint, QRectF, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QPushButton,
     QSystemTrayIcon,
     QTabWidget,
@@ -23,6 +27,8 @@ from .design import heading_font, icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
+from .dialog_shell import StyledDialog
+from ..services.profiles import ProfileStore
 
 
 class TitleBar(QFrame):
@@ -52,6 +58,23 @@ class TitleBar(QFrame):
         brand.addWidget(title)
         layout.addLayout(brand)
         layout.addStretch()
+
+        profile_label = QLabel("Perfil")
+        profile_label.setObjectName("mutedText")
+        layout.addWidget(profile_label)
+        self.profile_combo = QComboBox()
+        self.profile_combo.setFixedWidth(135)
+        self.profile_combo.setToolTip("Perfil local de recortes e alertas")
+        self.profile_combo.currentTextChanged.connect(window._switch_profile)
+        layout.addWidget(self.profile_combo)
+        create_profile = QPushButton()
+        create_profile.setObjectName("iconButton")
+        create_profile.setFixedSize(27, 27)
+        create_profile.setIcon(icon("plus", size=16))
+        create_profile.setToolTip("Criar perfil")
+        create_profile.setAccessibleName("Criar perfil")
+        create_profile.clicked.connect(window._create_profile)
+        layout.addWidget(create_profile)
 
         minimize = self._control("minus", "Minimizar")
         minimize.clicked.connect(window.showMinimized)
@@ -107,8 +130,16 @@ class TitleBar(QFrame):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, profile_store: ProfileStore | None = None,
+                 startup_warnings: list[str] | None = None) -> None:
         super().__init__()
+        self._profile_store = profile_store or ProfileStore()
+        self._profiles_enabled = profile_store is not None
+        self._profile_loading = False
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(350)
+        self._save_timer.timeout.connect(self._save_profile)
         self._exiting = False
         self._tray: QSystemTrayIcon | None = None
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
@@ -135,6 +166,13 @@ class MainWindow(QMainWindow):
             "Alertas",
         )
         self.setCentralWidget(tabs)
+        self.capture_panel.changed.connect(self._schedule_save)
+        self.audio_panel.changed.connect(self._schedule_save)
+        self._refresh_profile_combo()
+        if self._profiles_enabled:
+            warnings = (startup_warnings or []) + self._load_active_profile()
+            if warnings:
+                QTimer.singleShot(0, lambda: self._show_profile_warnings(warnings))
         self.statusBar().setSizeGripEnabled(False)
         self.author_link = QLabel(
             'Feito por <a href="https://github.com/CaioMascarenhas" '
@@ -151,6 +189,93 @@ class MainWindow(QMainWindow):
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self._setup_tray()
+
+    def _refresh_profile_combo(self) -> None:
+        combo = self._title_bar.profile_combo
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(self._profile_store.data["profiles"])
+        combo.setCurrentText(self._profile_store.active_name)
+        combo.blockSignals(False)
+
+    def _load_active_profile(self) -> list[str]:
+        self._profile_loading = True
+        try:
+            profile = self._profile_store.active
+            warnings = self.audio_panel.load_state(profile.get("audio", {}))
+            warnings.extend(self.capture_panel.load_state(profile.get("recortes", [])))
+            return warnings
+        finally:
+            self._profile_loading = False
+
+    def _schedule_save(self) -> None:
+        if self._profiles_enabled and not self._profile_loading:
+            self._save_timer.start()
+
+    def _save_profile(self) -> bool:
+        if not self._profiles_enabled or self._profile_loading:
+            return True
+        self._save_timer.stop()
+        profile = self._profile_store.active
+        profile["audio"] = self.audio_panel.export_state()
+        profile["recortes"] = self.capture_panel.export_state()
+        try:
+            self._profile_store.save()
+            return True
+        except OSError as exc:
+            QMessageBox.warning(self, "Perfil não salvo", f"Não foi possível salvar o perfil: {exc}")
+            return False
+
+    def _show_profile_warnings(self, warnings: list[str]) -> None:
+        QMessageBox.warning(self, "Perfil restaurado com avisos", "\n".join(dict.fromkeys(warnings)))
+
+    def _switch_profile(self, name: str) -> None:
+        if (not self._profiles_enabled or not name or name == self._profile_store.active_name):
+            return
+        if not self._save_profile():
+            self._refresh_profile_combo()
+            return
+        try:
+            self._profile_store.select(name)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Perfil indisponível", str(exc))
+            self._refresh_profile_combo()
+            return
+        warnings = self._load_active_profile()
+        if warnings:
+            self._show_profile_warnings(warnings)
+        self.statusBar().showMessage(f"Perfil '{name}' ativado.", 5000)
+
+    def _create_profile(self) -> None:
+        if not self._profiles_enabled:
+            return
+        dialog = StyledDialog(self, "Novo perfil")
+        dialog.setMinimumWidth(330)
+        field = QLineEdit()
+        field.setPlaceholderText("Nome do perfil ou personagem")
+        dialog.content_layout.addWidget(field)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(dialog.reject)
+        create = QPushButton("Criar perfil")
+        create.setObjectName("primaryButton")
+        create.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(create)
+        dialog.content_layout.addLayout(actions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        if not self._save_profile():
+            return
+        try:
+            self._profile_store.create(field.text())
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Perfil não criado", str(exc))
+            return
+        self._refresh_profile_combo()
+        self._load_active_profile()
+        self.statusBar().showMessage(f"Perfil '{self._profile_store.active_name}' criado.", 5000)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -247,6 +372,8 @@ class MainWindow(QMainWindow):
             self.show_window()
 
     def exit_app(self) -> None:
+        if not self._save_profile():
+            return
         if not self.capture_panel.shutdown():
             self.statusBar().showMessage("A captura ainda está encerrando. Tente sair novamente.")
             return
@@ -258,8 +385,12 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._tray is not None and not self._exiting:
+            self._save_profile()
             self.hide()
             event.ignore()
         else:
+            if not self._exiting and not self._save_profile():
+                event.ignore()
+                return
             self.capture_panel.shutdown()
             event.accept()

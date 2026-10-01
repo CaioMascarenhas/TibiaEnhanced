@@ -10,6 +10,7 @@ from .ui.main_window import MainWindow
 from .ui.design import HoverEffects, InteractionCursors, load_fonts
 from .ui.theme import app_stylesheet
 from .services.windowing import enable_per_monitor_dpi_awareness
+from .services.profiles import ProfileStore
 
 
 def main() -> int:
@@ -29,6 +30,8 @@ def main() -> int:
     app.installEventFilter(hover_effects)
     app.setStyleSheet(app_stylesheet(heading_family, body_family))
 
-    window = MainWindow()
+    profiles = ProfileStore()
+    warnings = profiles.load()
+    window = MainWindow(profiles, warnings)
     window.show()
     return app.exec()
