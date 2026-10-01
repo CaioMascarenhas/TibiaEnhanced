@@ -26,7 +26,7 @@ class MirrorEntry:
     window: DwmMirrorWindow
     visible: bool = False
     locked: bool = False
-    fit_mode: str = "contain"
+    fit_mode: str = "stretch"
     transparency_percent: int = 0
     source_executable: str = ""
     source_class: str = ""
@@ -239,6 +239,10 @@ class CapturePanel(QWidget):
         mirror.action_requested.connect(lambda action, mirror_key=key:
                                         self._mirror_action(mirror_key, action))
         mirror.geometry_changed.connect(self._changed)
+        mirror.opacity_requested.connect(lambda value, mirror_key=key:
+                                          self._mirror_opacity(mirror_key, value))
+        mirror.fit_mode_requested.connect(lambda mode, mirror_key=key:
+                                          self._mirror_fit_mode(mirror_key, mode))
         index = self.window_combo.currentIndex()
         entry = MirrorEntry(key, hwnd, source_title, region, mirror,
                             source_executable=self.window_combo.itemData(index, Qt.ItemDataRole.UserRole + 1) or "",
@@ -270,6 +274,22 @@ class CapturePanel(QWidget):
         }
         if key in self._entries and action in callbacks:
             self._card_action(key, callbacks[action])
+
+    def _mirror_opacity(self, key: int, percent: int) -> None:
+        if key not in self._entries:
+            return
+        self._select_entry(key)
+        self._change_transparency(100 - percent)
+        self._refresh_cards(key)
+
+    def _mirror_fit_mode(self, key: int, mode: str) -> None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return
+        entry.window.set_fit_mode(mode)
+        entry.fit_mode = mode
+        self._select_entry(key)
+        self._changed()
 
     def _edit_entry(self) -> None:
         self.details_dialog.exec()
@@ -618,6 +638,10 @@ class CapturePanel(QWidget):
         mirror.action_requested.connect(lambda action, mirror_key=key:
                                         self._mirror_action(mirror_key, action))
         mirror.geometry_changed.connect(self._changed)
+        mirror.opacity_requested.connect(lambda value, mirror_key=key:
+                                          self._mirror_opacity(mirror_key, value))
+        mirror.fit_mode_requested.connect(lambda mode, mirror_key=key:
+                                          self._mirror_fit_mode(mirror_key, mode))
         mirror.setGeometry(*record["geometry"])
         mirror.set_locked(record["locked"])
         mirror.set_opacity_percent(100 - record["transparency_percent"])

@@ -5,11 +5,12 @@ import time
 from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QCloseEvent, QContextMenuEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion, QWheelEvent
+from PySide6.QtGui import QActionGroup, QColor, QCloseEvent, QContextMenuEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion, QWheelEvent
 from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLineEdit,
-                               QMenu, QMessageBox, QPushButton, QWidget)
+                               QMenu, QMessageBox, QPushButton, QVBoxLayout, QWidget, QWidgetAction)
 
 from .design import icon
+from .design import CompactSlider
 
 from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
@@ -357,8 +358,10 @@ class DwmMirrorWindow(QWidget):
     stopped = Signal(str)
     action_requested = Signal(str)
     geometry_changed = Signal()
+    opacity_requested = Signal(int)
+    fit_mode_requested = Signal(str)
 
-    def __init__(self, hwnd: int, region: Region, *, fit_mode: str = "contain") -> None:
+    def __init__(self, hwnd: int, region: Region, *, fit_mode: str = "stretch") -> None:
         super().__init__()
         self._hwnd = hwnd
         self._region = region
@@ -377,7 +380,8 @@ class DwmMirrorWindow(QWidget):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.resize(max(32, region.width), max(32, region.height))
         self.setMinimumSize(24, 24)
-        self.setStyleSheet("background: black")
+        self.setObjectName("dwmMirrorWindow")
+        self.setStyleSheet("QWidget#dwmMirrorWindow { background: black; }")
         self.setMouseTracking(True)
         self._timer = QTimer(self)
         self._timer.setInterval(500)
@@ -398,6 +402,10 @@ class DwmMirrorWindow(QWidget):
     @property
     def opacity_percent(self) -> int:
         return self._opacity_percent
+
+    @property
+    def fit_mode(self) -> str:
+        return self._fit_mode
 
     def rename(self, name: str) -> None:
         self._region = Region(name, self._region.x, self._region.y,
@@ -557,6 +565,41 @@ class DwmMirrorWindow(QWidget):
         menu = QMenu(self)
         menu.addAction("Ocultar espelho", lambda: self.action_requested.emit("hide"))
         menu.addAction("Bloquear cliques", lambda: self.action_requested.emit("lock"))
+        menu.addSeparator()
+        opacity = QWidget(menu)
+        opacity.setMinimumWidth(230)
+        layout = QVBoxLayout(opacity)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(7)
+        caption = QHBoxLayout()
+        caption.addWidget(QLabel("Opacidade"))
+        caption.addStretch()
+        percent = QLabel(f"{self._opacity_percent}%")
+        percent.setFixedWidth(percent.fontMetrics().horizontalAdvance("100%") + 4)
+        percent.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        caption.addWidget(percent)
+        layout.addLayout(caption)
+        slider = CompactSlider(Qt.Orientation.Horizontal)
+        slider.setObjectName("mirrorOpacity")
+        slider.setRange(10, 100)
+        slider.setValue(self._opacity_percent)
+        slider.setAccessibleName("Opacidade do espelho")
+        slider.valueChanged.connect(lambda value: percent.setText(f"{value}%"))
+        slider.valueChanged.connect(self.opacity_requested.emit)
+        layout.addWidget(slider)
+        opacity_action = QWidgetAction(menu)
+        opacity_action.setDefaultWidget(opacity)
+        menu.addAction(opacity_action)
+        fit_menu = menu.addMenu("Ajuste da imagem")
+        group = QActionGroup(fit_menu)
+        group.setExclusive(True)
+        for text, mode in (("Preencher janela", "stretch"), ("Preservar proporção", "contain")):
+            action = fit_menu.addAction(text)
+            action.setCheckable(True)
+            action.setChecked(self._fit_mode == mode)
+            group.addAction(action)
+            action.triggered.connect(lambda checked=False, selected=mode:
+                                     self.fit_mode_requested.emit(selected))
         menu.addSeparator()
         menu.addAction("Excluir recorte", lambda: self.action_requested.emit("delete"))
         return menu

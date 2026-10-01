@@ -55,6 +55,8 @@ Foods e Potions são temporizadores padrão e não podem ser excluídos. O contr
 
 Nomes de perfis, alertas e recortes têm limite de **24 caracteres**. Nomes maiores em configurações antigas são abreviados com aviso, preservando os demais dados.
 
+Novos recortes usam **Preencher janela** como ajuste padrão. No menu de botão direito do espelho, o slider **Opacidade** ajusta a transparência e **Ajuste da imagem** alterna entre **Preencher janela** e **Preservar proporção**. Essas preferências ficam salvas no perfil.
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)

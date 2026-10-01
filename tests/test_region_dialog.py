@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QPoint, QRect, Qt  # noqa: E402
 from PySide6.QtGui import QImage  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
-from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
+from PySide6.QtWidgets import QApplication, QPushButton, QSlider  # noqa: E402
 
 from tibiaenhanced.ui.region_dialog import RegionDialog  # noqa: E402
 from tibiaenhanced.ui.dwm_windows import DwmMirrorWindow, DwmRegionDialog  # noqa: E402
@@ -78,6 +78,19 @@ class RegionDialogTests(unittest.TestCase):
             if not action.isSeparator():
                 action.trigger()
         self.assertEqual(received, ["hide", "lock", "delete"])
+        opacity = []
+        fit_modes = []
+        window.opacity_requested.connect(opacity.append)
+        window.fit_mode_requested.connect(fit_modes.append)
+        slider = menu.findChild(QSlider, "mirrorOpacity")
+        self.assertEqual(slider.value(), 100)
+        slider.setValue(55)
+        self.assertEqual(opacity, [55])
+        fit_menu = next(action.menu() for action in menu.actions() if action.menu() is not None)
+        self.assertEqual(window.fit_mode, "stretch")
+        self.assertTrue(fit_menu.actions()[0].isChecked())
+        fit_menu.actions()[1].trigger()
+        self.assertEqual(fit_modes, ["contain"])
         window.close()
 
 
