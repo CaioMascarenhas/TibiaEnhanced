@@ -123,6 +123,7 @@ class CompactSlider(QSlider):
     def __init__(self, orientation, parent=None, *, accent: str = ACCENT) -> None:
         super().__init__(orientation, parent)
         self.accent = accent
+        self._drag_offset = None
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
         self._hover = 0.0
         self._hover_animation = QVariantAnimation(self)
@@ -148,33 +149,88 @@ class CompactSlider(QSlider):
         super().leaveEvent(event)
         self._animate_hover(0.0)
 
-    def paintEvent(self, event) -> None:
+    def _track_geometry(self):
+        """Usa os mesmos limites do estilo para desenhar e interpretar o mouse."""
         option = QStyleOptionSlider()
         self.initStyleOption(option)
-        handle = self.style().subControlRect(
-            QStyle.ComplexControl.CC_Slider, option,
-            QStyle.SubControl.SC_SliderHandle, self)
+        horizontal = self.orientation() == Qt.Orientation.Horizontal
+        centers = []
+        for value in (self.minimum(), self.maximum()):
+            option.sliderPosition = value
+            handle = self.style().subControlRect(
+                QStyle.ComplexControl.CC_Slider, option,
+                QStyle.SubControl.SC_SliderHandle, self)
+            centers.append(handle.center().x() if horizontal else handle.center().y())
+        start, end = sorted(centers)
+        position = start + QStyle.sliderPositionFromValue(
+            self.minimum(), self.maximum(), self.sliderPosition(),
+            end - start, option.upsideDown)
+        return start, end, position, option.upsideDown
+
+    def _move_to_pointer(self, event) -> None:
+        start, end, _, upside_down = self._track_geometry()
+        coordinate = (event.position().x() if self.orientation() == Qt.Orientation.Horizontal
+                      else event.position().y())
+        position = round(coordinate - self._drag_offset - start)
+        self.setSliderPosition(QStyle.sliderValueFromPosition(
+            self.minimum(), self.maximum(), position, end - start, upside_down))
+
+    def mousePressEvent(self, event) -> None:
+        if not self.isEnabled() or event.button() != Qt.MouseButton.LeftButton:
+            event.ignore()
+            return
+        _, _, position, _ = self._track_geometry()
+        coordinate = (event.position().x() if self.orientation() == Qt.Orientation.Horizontal
+                      else event.position().y())
+        # Segurar a borda do indicador não deve deslocar o valor ao iniciar o arraste.
+        self._drag_offset = coordinate - position if abs(coordinate - position) <= 7 else 0
+        self.setFocus(Qt.FocusReason.MouseFocusReason)
+        self.setSliderDown(True)
+        self._move_to_pointer(event)
+        event.accept()
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._drag_offset is None:
+            super().mouseMoveEvent(event)
+            return
+        self._move_to_pointer(event)
+        event.accept()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if event.button() != Qt.MouseButton.LeftButton or self._drag_offset is None:
+            super().mouseReleaseEvent(event)
+            return
+        self._move_to_pointer(event)
+        self._drag_offset = None
+        self.setSliderDown(False)
+        if self.value() != self.sliderPosition():
+            self.triggerAction(QSlider.SliderAction.SliderMove)
+        event.accept()
+
+    def paintEvent(self, event) -> None:
+        start, end, position, upside_down = self._track_geometry()
+        horizontal = self.orientation() == Qt.Orientation.Horizontal
+        def point(coordinate):
+            return (QPointF(coordinate, self.height() / 2) if horizontal
+                    else QPointF(self.width() / 2, coordinate))
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        y = self.height() / 2
-        left, right = handle.width() / 2, self.width() - handle.width() / 2
-        x = handle.center().x()
         painter.setPen(QPen(QColor(TRACK), 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.drawLine(QPointF(left, y), QPointF(right, y))
+        painter.drawLine(point(start), point(end))
         accent = QColor(self.accent if self.isEnabled() else "#666979")
         if self.isEnabled():
             accent = accent.lighter(round(100 + 14 * self._hover))
         painter.setPen(QPen(accent, 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        origin = right if option.upsideDown else left
-        painter.drawLine(QPointF(origin, y), QPointF(x, y))
+        origin = end if upside_down else start
+        painter.drawLine(point(origin), point(position))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(accent)
         radius = 5 + 1.5 * self._hover
-        painter.drawEllipse(QPointF(x, y), radius, radius)
+        painter.drawEllipse(point(position), radius, radius)
         if self.hasFocus():
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(accent.lighter(140), 1))
-            painter.drawEllipse(QPointF(x, y), radius + 2, radius + 2)
+            painter.drawEllipse(point(position), radius + 2, radius + 2)
 
 
 class ToggleCheckBox(QCheckBox):
