@@ -65,6 +65,7 @@ class TitleBar(QFrame):
         self.profile_controls = QFrame()
         self.profile_controls.setObjectName("profileControls")
         self.profile_controls.setFixedHeight(32)
+        self._profile_scale = -1.0
         profile_row = QHBoxLayout(self.profile_controls)
         profile_row.setContentsMargins(7, 2, 4, 2)
         profile_row.setSpacing(3)
@@ -98,6 +99,7 @@ class TitleBar(QFrame):
         manage_profile.setToolTip("Gerenciar perfil")
         manage_profile.setAccessibleName("Gerenciar perfil")
         self.profile_menu = QMenu(manage_profile)
+        self._profile_actions = ((create_profile, "plus", 16), (manage_profile, "pencil", 15))
         self.profile_menu.addAction("Renomear perfil", window._rename_profile)
         self.delete_profile_action = self.profile_menu.addAction("Excluir perfil", window._delete_profile)
         manage_profile.clicked.connect(lambda: self.profile_menu.popup(
@@ -120,6 +122,22 @@ class TitleBar(QFrame):
         close.clicked.connect(window.close)
         chrome.addWidget(close)
         layout.addLayout(chrome)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        # Preserve the compact opening size, then grow within a bounded range.
+        scale = min(1.0, max(0.0, (self.window.width() - 680) / 720))
+        if scale == self._profile_scale:
+            return
+        self._profile_scale = scale
+        self.profile_combo.setFixedWidth(round(115 + 165 * scale))
+        self.profile_controls.setFixedHeight(round(32 + 4 * scale))
+        self.setFixedHeight(round(44 + 4 * scale))
+        for button, name, base_size in self._profile_actions:
+            button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
+            size = round(base_size + 2 * scale)
+            button.setIcon(icon(name, size=size))
+            button.setIconSize(QSize(size, size))
 
     def _control(self, name: str, tooltip: str) -> QPushButton:
         button = QPushButton()
