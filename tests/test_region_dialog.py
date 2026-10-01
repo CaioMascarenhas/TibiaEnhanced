@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QPoint, QRect, Qt  # noqa: E402
 from PySide6.QtGui import QImage  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
 
 from tibiaenhanced.ui.region_dialog import RegionDialog  # noqa: E402
 from tibiaenhanced.ui.dwm_windows import DwmMirrorWindow, DwmRegionDialog  # noqa: E402
@@ -41,6 +41,11 @@ class RegionDialogTests(unittest.TestCase):
             dialog = DwmRegionDialog(42)
         self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
         self.assertFalse(dialog.mask().isEmpty())
+        cancel = next(button for button in dialog.findChildren(QPushButton)
+                      if button.text() == "Cancelar")
+        self.assertLess(cancel.parentWidget().layout().indexOf(cancel),
+                        dialog._ok.parentWidget().layout().indexOf(dialog._ok))
+        self.assertEqual(dialog._ok.objectName(), "primaryButton")
         dialog.close()
 
     def test_zoom_and_pan_keep_selection_in_source_coordinates(self) -> None:

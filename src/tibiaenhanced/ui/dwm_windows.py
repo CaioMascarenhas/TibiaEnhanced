@@ -6,7 +6,7 @@ from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QCloseEvent, QContextMenuEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion, QWheelEvent
-from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMessageBox, QPushButton, QWidget)
 
 from .design import icon
@@ -157,15 +157,22 @@ class DwmRegionDialog(QDialog):
         self.name_input.setGeometry(12, self._display.bottom() + 97,
                                     self.width() - 24, 32)
         self.name_input.textChanged.connect(self._update_ok_state)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
-                                   QDialogButtonBox.StandardButton.Cancel, self)
-        buttons.setGeometry(12, self._display.bottom() + 140, self.width() - 24, 36)
-        self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
-        self._ok.setText("Criar espelho")
+        actions = QWidget(self)
+        actions.setGeometry(12, self._display.bottom() + 140, self.width() - 24, 36)
+        buttons = QHBoxLayout(actions)
+        buttons.setContentsMargins(0, 0, 0, 0)
+        buttons.setSpacing(8)
+        buttons.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.setMinimumWidth(92)
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        self._ok = QPushButton("Criar espelho")
+        self._ok.setObjectName("primaryButton")
+        self._ok.setMinimumWidth(124)
         self._ok.setEnabled(False)
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
+        self._ok.clicked.connect(self.accept)
+        buttons.addWidget(self._ok)
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     @property
