@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from .design import heading_font, icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
+from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
 
 
 class TitleBar(QFrame):
@@ -137,7 +138,7 @@ class MainWindow(QMainWindow):
         self.statusBar().setSizeGripEnabled(False)
         self.author_link = QLabel(
             'Feito por <a href="https://github.com/CaioMascarenhas" '
-            'style="color: #8dc8ff; text-decoration: none;">Mascarenhas</a>'
+            f'style="color: {ACCENT_LIGHT}; text-decoration: none;">Mascarenhas</a>'
         )
         self.author_link.setObjectName("footerCredit")
         self.author_link.setOpenExternalLinks(True)
@@ -157,8 +158,8 @@ class MainWindow(QMainWindow):
         inset = 0 if self.isMaximized() else 6
         radius = 0 if self.isMaximized() else 17
         rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
-        painter.setPen(QPen(QColor("#34363e"), 1))
-        painter.setBrush(QColor("#1b1e24"))
+        painter.setPen(QPen(QColor(BORDER), 1))
+        painter.setBrush(QColor(BACKGROUND))
         painter.drawRoundedRect(rect, radius, radius)
         super().paintEvent(event)
 

@@ -17,6 +17,7 @@ from tibiaenhanced.ui.window_selector import WindowSelector  # noqa: E402
 from tibiaenhanced.ui.design import CompactSlider  # noqa: E402
 
 from tibiaenhanced.ui.design import ASSETS, HoverEffects, InteractionCursors, heading_font, icon, load_fonts  # noqa: E402
+from tibiaenhanced.ui.palette import ACCENT  # noqa: E402
 from tibiaenhanced.ui.main_window import MainWindow  # noqa: E402
 
 
@@ -29,10 +30,11 @@ class ModernUiTests(unittest.TestCase):
         heading, body = load_fonts()
         self.assertIn(heading, QFontDatabase.families())
         self.assertIn(body, QFontDatabase.families())
-        self.assertEqual(heading_font(16).weight(), 900)
+        self.assertEqual(heading, "Space Grotesk")
+        self.assertEqual(heading_font(16).weight(), 700)
         self.assertFalse(icon("monitor").isNull())
-        self.assertEqual(body, "Inter")
-        for license_file in ("fonts/EXO-OFL.txt", "fonts/INTER-OFL.txt", "icons/LICENSE"):
+        self.assertTrue(body.startswith("DM Sans"))
+        for license_file in ("fonts/SPACE-GROTESK-OFL.txt", "fonts/DM-SANS-OFL.txt", "icons/LICENSE"):
             self.assertTrue((ASSETS / license_file).is_file())
 
     def test_main_window_has_compact_rounded_chrome(self) -> None:
@@ -65,18 +67,18 @@ class ModernUiTests(unittest.TestCase):
         self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
         self.app.removeEventFilter(cursors)
 
-    def test_settings_dialogs_share_rounded_chrome_and_audio_uses_blue(self) -> None:
+    def test_settings_dialogs_share_rounded_chrome_and_palette(self) -> None:
         panel = AudioPanel()
         timer_dialog = TimerDialog(panel, panel.cards[0].timer)
         self.assertIsInstance(timer_dialog, StyledDialog)
         self.assertTrue(timer_dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
-        self.assertEqual(timer_dialog.volume_input.accent, "#4ba6ff")
-        self.assertEqual(panel.master_volume.accent, "#4ba6ff")
+        self.assertEqual(timer_dialog.volume_input.accent, ACCENT)
+        self.assertEqual(panel.master_volume.accent, ACCENT)
         capture = CapturePanel()
         self.assertIsInstance(capture.details_dialog, StyledDialog)
         self.assertTrue(capture.details_dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
         self.assertIsInstance(capture.transparency_slider, CompactSlider)
-        self.assertEqual(capture.transparency_slider.accent, "#5a9dff")
+        self.assertEqual(capture.transparency_slider.accent, ACCENT)
         panel.close()
         capture.close()
 
