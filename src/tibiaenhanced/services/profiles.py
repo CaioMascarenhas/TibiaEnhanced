@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths
+from ..models import NAME_MAX_LENGTH
 
 
 SCHEMA_VERSION = 1
@@ -44,22 +45,35 @@ class ProfileStore:
             profiles = raw.get("profiles")
             if not isinstance(profiles, dict) or not profiles:
                 raise ValueError("lista de perfis inválida")
-            valid = {
-                name: profile for name, profile in profiles.items()
-                if isinstance(name, str) and name.strip() and isinstance(profile, dict)
-            }
+            valid = {}
+            renamed = {}
+            warnings = []
+            for name, profile in profiles.items():
+                if not isinstance(name, str) or not name.strip() or not isinstance(profile, dict):
+                    continue
+                short = name.strip()[:NAME_MAX_LENGTH]
+                candidate = short
+                suffix_index = 2
+                while any(existing.casefold() == candidate.casefold() for existing in valid):
+                    suffix = f" ({suffix_index})"
+                    candidate = short[:NAME_MAX_LENGTH - len(suffix)] + suffix
+                    suffix_index += 1
+                valid[candidate] = profile
+                renamed[name] = candidate
+                if candidate != name:
+                    warnings.append(f"Perfil '{name}' renomeado para '{candidate}' para respeitar o limite de {NAME_MAX_LENGTH} caracteres.")
             if not valid:
                 raise ValueError("nenhum perfil válido")
             active = raw.get("active_profile")
-            if not isinstance(active, str) or active not in valid:
-                active = next(iter(valid))
+            active = renamed.get(active, next(iter(valid))) if isinstance(active, str) else next(iter(valid))
             self.data = {
                 "schema_version": SCHEMA_VERSION,
                 "active_profile": active,
                 "profiles": valid,
             }
-            return (["Alguns perfis inválidos foram ignorados."]
-                    if len(valid) != len(profiles) else [])
+            if len(valid) != len(profiles):
+                warnings.append("Alguns perfis inválidos foram ignorados.")
+            return warnings
         except (OSError, ValueError, TypeError) as exc:
             backup = self.path.with_name(
                 f"profiles-invalid-{datetime.now():%Y%m%d-%H%M%S-%f}.json")
@@ -80,8 +94,8 @@ class ProfileStore:
 
     def create(self, name: str) -> None:
         name = name.strip()
-        if not name or len(name) > 80:
-            raise ValueError("Informe um nome de até 80 caracteres.")
+        if not name or len(name) > NAME_MAX_LENGTH:
+            raise ValueError(f"Informe um nome de até {NAME_MAX_LENGTH} caracteres.")
         if any(existing.casefold() == name.casefold() for existing in self.data["profiles"]):
             raise ValueError("Já existe um perfil com esse nome.")
         previous = self.active_name
@@ -110,8 +124,8 @@ class ProfileStore:
         profiles = self.data["profiles"]
         if name not in profiles:
             raise ValueError("Perfil não encontrado")
-        if not new_name or len(new_name) > 80:
-            raise ValueError("Informe um nome de até 80 caracteres.")
+        if not new_name or len(new_name) > NAME_MAX_LENGTH:
+            raise ValueError(f"Informe um nome de até {NAME_MAX_LENGTH} caracteres.")
         if any(existing != name and existing.casefold() == new_name.casefold()
                for existing in profiles):
             raise ValueError("Já existe um perfil com esse nome.")

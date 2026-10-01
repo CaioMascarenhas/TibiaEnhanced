@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+NAME_MAX_LENGTH = 24
+
+
 @dataclass(frozen=True, slots=True)
 class Region:
     name: str

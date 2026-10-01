@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLay
                                QPushButton, QScrollArea,
                                QVBoxLayout, QWidget)
 
-from tibiaenhanced.models import Region
+from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.windowing import list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
 from .design import icon
@@ -427,6 +427,8 @@ class CapturePanel(QWidget):
         dialog = StyledDialog(self, title)
         dialog.setMinimumWidth(340)
         field = QLineEdit(initial)
+        field.setMaxLength(NAME_MAX_LENGTH)
+        field.setToolTip(f"Máximo de {NAME_MAX_LENGTH} caracteres")
         field.setPlaceholderText("Nome do recorte")
         dialog.content_layout.addWidget(field)
         actions = QHBoxLayout()
@@ -548,6 +550,10 @@ class CapturePanel(QWidget):
             self._pending_mirrors = []
             self._selected_key = None
             for record in records:
+                if isinstance(record, dict) and isinstance(record.get("name"), str):
+                    if len(record["name"].strip()) > NAME_MAX_LENGTH:
+                        warnings.append(f"Nome do recorte abreviado para {NAME_MAX_LENGTH} caracteres: {record['name']}")
+                    record = {**record, "name": record["name"].strip()[:NAME_MAX_LENGTH]}
                 if not self._valid_record(record):
                     warnings.append("Um recorte inválido foi ignorado.")
                     continue
@@ -570,6 +576,7 @@ class CapturePanel(QWidget):
             and isinstance(record.get("source_executable", ""), str)
             and isinstance(record.get("source_class", ""), str)
             and isinstance(record.get("name"), str) and bool(record["name"].strip())
+            and len(record["name"]) <= NAME_MAX_LENGTH
             and isinstance(region, list) and len(region) == 4
             and all(type(value) is int for value in region)
             and region[0] >= 0 and region[1] >= 0 and 1 <= region[2] <= 10000

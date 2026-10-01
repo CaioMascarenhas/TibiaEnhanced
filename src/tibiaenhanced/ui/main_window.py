@@ -8,7 +8,6 @@ from PySide6.QtCore import QEvent, QPoint, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -18,6 +17,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSystemTrayIcon,
     QTabWidget,
     QVBoxLayout,
@@ -29,6 +29,8 @@ from .audio_panel import AudioPanel
 from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
+from ..models import NAME_MAX_LENGTH
+from .window_selector import WindowSelector
 
 
 class TitleBar(QFrame):
@@ -61,18 +63,26 @@ class TitleBar(QFrame):
         layout.addStretch()
 
         self.profile_controls = QFrame()
+        self.profile_controls.setObjectName("profileControls")
+        self.profile_controls.setFixedHeight(32)
         profile_row = QHBoxLayout(self.profile_controls)
-        profile_row.setContentsMargins(0, 0, 0, 0)
-        profile_row.setSpacing(5)
+        profile_row.setContentsMargins(7, 2, 4, 2)
+        profile_row.setSpacing(3)
         profile_label = QLabel("Perfil")
-        profile_label.setObjectName("mutedText")
+        profile_label.setObjectName("profileLabel")
+        profile_label.setFixedWidth(30)
         profile_row.addWidget(profile_label)
-        self.profile_combo = QComboBox()
-        self.profile_combo.setMinimumWidth(90)
-        self.profile_combo.setMaximumWidth(125)
+        self.profile_combo = WindowSelector()
+        self.profile_combo.setObjectName("profileSelector")
+        self.profile_combo.setFixedWidth(115)
+        self.profile_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.profile_combo.setToolTip("Perfil local de recortes e alertas")
         self.profile_combo.currentTextChanged.connect(window._switch_profile)
         profile_row.addWidget(self.profile_combo)
+        divider = QFrame()
+        divider.setObjectName("profileDivider")
+        divider.setFixedSize(1, 16)
+        profile_row.addWidget(divider)
         create_profile = QPushButton()
         create_profile.setObjectName("iconButton")
         create_profile.setFixedSize(24, 27)
@@ -291,7 +301,8 @@ class MainWindow(QMainWindow):
         dialog = StyledDialog(self, title)
         dialog.setMinimumWidth(330)
         field = QLineEdit(initial)
-        field.setMaxLength(80)
+        field.setMaxLength(NAME_MAX_LENGTH)
+        field.setToolTip(f"Máximo de {NAME_MAX_LENGTH} caracteres")
         field.setPlaceholderText("Nome do perfil ou personagem")
         dialog.content_layout.addWidget(field)
         actions = QHBoxLayout()

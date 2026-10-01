@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..services.audio_timer import AudioTimer
+from ..models import NAME_MAX_LENGTH
 from .design import ToggleCheckBox, heading_font, icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
@@ -68,6 +69,8 @@ class TimerDialog(StyledDialog):
         form = QFormLayout()
         form.setSpacing(9)
         self.name_input = QLineEdit(timer.name if timer else "")
+        self.name_input.setMaxLength(NAME_MAX_LENGTH)
+        self.name_input.setToolTip(f"Máximo de {NAME_MAX_LENGTH} caracteres")
         self.name_input.setPlaceholderText("Ex.: Boost")
         self.duration_input = QSpinBox()
         self.duration_input.setRange(1, 86400)
@@ -94,7 +97,7 @@ class TimerDialog(StyledDialog):
         shortcut_row = QHBoxLayout()
         shortcut_row.addWidget(self.shortcut_input, 1)
         shortcut_row.addWidget(clear_shortcut)
-        form.addRow("Nome", self.name_input)
+        form.addRow(f"Nome (até {NAME_MAX_LENGTH} caracteres)", self.name_input)
         form.addRow("Duração", self.duration_input)
         form.addRow("Som (.mp3/.wav)", sound_row)
         form.addRow("Volume", self.volume_input)
@@ -517,14 +520,16 @@ class AudioPanel(QWidget):
                 type(volume) not in (int, float) or not 0 <= volume <= 1 or
                 type(loop) is not bool or not isinstance(shortcut, str)):
             return ["Um alerta tem configuração inválida."]
-        timer.name = name.strip()
+        warnings = []
+        if len(name.strip()) > NAME_MAX_LENGTH:
+            warnings.append(f"Nome do alerta abreviado para {NAME_MAX_LENGTH} caracteres: {name}")
+        timer.name = name.strip()[:NAME_MAX_LENGTH]
         timer.duration_seconds = duration
         timer.sound_file = Path(sound)
         timer.volume = float(volume)
         timer.loop = loop
         timer.shortcut = shortcut
         timer.reset()
-        warnings = []
         if not timer.sound_file.is_file():
             warnings.append(f"Áudio ausente em {timer.name}: {sound}. Edite o temporizador para escolher outro.")
         if self.shortcut_conflict(QKeySequence(shortcut)):

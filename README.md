@@ -53,6 +53,8 @@ Ao clicar no **X**, escolha **Fechar aplicativo**, **Minimizar para a bandeja** 
 
 Foods e Potions são temporizadores padrão e não podem ser excluídos. O controle **Loop** usa um interruptor arredondado; temporizadores criados pelo usuário podem ser excluídos pelo próprio card.
 
+Nomes de perfis, alertas e recortes têm limite de **24 caracteres**. Nomes maiores em configurações antigas são abreviados com aviso, preservando os demais dados.
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)

@@ -1,6 +1,7 @@
 """Persistência local de perfis e restauração de configuração."""
 
 import os
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,6 +21,7 @@ from tibiaenhanced.ui.audio_panel import AudioPanel, DEFAULT_TIMERS  # noqa: E40
 from tibiaenhanced.ui.capture_panel import CapturePanel  # noqa: E402
 from tibiaenhanced.ui.main_window import MainWindow  # noqa: E402
 from tibiaenhanced.services.profiles import empty_profile  # noqa: E402
+from tibiaenhanced.models import NAME_MAX_LENGTH  # noqa: E402
 
 
 class ProfileTests(unittest.TestCase):
@@ -64,6 +66,26 @@ class ProfileTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 store.delete("Padrão")
 
+    def test_long_saved_names_are_shortened_without_losing_profiles(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "profiles.json"
+            first = "A" * NAME_MAX_LENGTH + " first"
+            second = "A" * NAME_MAX_LENGTH + " second"
+            path.write_text(json.dumps({
+                "schema_version": 1, "active_profile": second,
+                "profiles": {first: {"audio": {"master_volume": 35}},
+                             second: {"audio": {"master_volume": 72}}},
+            }), encoding="utf-8")
+            store = ProfileStore(path)
+            self.assertTrue(store.load())
+            self.assertEqual(len(store.data["profiles"]), 2)
+            self.assertTrue(all(len(name) <= NAME_MAX_LENGTH for name in store.data["profiles"]))
+            self.assertEqual(store.active["audio"]["master_volume"], 72)
+            with self.assertRaises(ValueError):
+                store.create("B" * (NAME_MAX_LENGTH + 1))
+            with self.assertRaises(ValueError):
+                store.rename(store.active_name, "B" * (NAME_MAX_LENGTH + 1))
+
     def test_audio_configuration_restores_without_starting_timers(self) -> None:
         panel = AudioPanel()
         custom = panel.add_timer(AudioTimer("Boost", 125, DEFAULT_TIMERS[0][2],
@@ -85,6 +107,9 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(panel.cards[0].timer.volume, 0.35)
         saved["timers"][-1]["sound_file"] = "C:/missing/sound.mp3"
         self.assertTrue(any("Áudio ausente" in warning for warning in panel.load_state(saved)))
+        saved["timers"][-1]["name"] = "X" * (NAME_MAX_LENGTH + 10)
+        self.assertTrue(panel.load_state(saved))
+        self.assertEqual(len(panel.cards[-1].timer.name), NAME_MAX_LENGTH)
         panel.close()
 
     def test_recorte_follows_tibia_process_when_character_changes(self) -> None:
@@ -111,6 +136,10 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(restored["geometry"], [120, 130, 200, 100])
         self.assertTrue(restored["locked"])
         self.assertEqual(restored["transparency_percent"], 20)
+        record["name"] = "R" * (NAME_MAX_LENGTH + 10)
+        self.assertTrue(panel.load_state([record]))
+        self.assertEqual(len(panel.entries[0].region.name), NAME_MAX_LENGTH)
+        self.assertEqual(panel.export_state()[0]["geometry"], [120, 130, 200, 100])
         panel.shutdown()
 
     def test_ambiguous_tibia_windows_remain_pending(self) -> None:

@@ -46,6 +46,12 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
     QPushButton#iconButton {{ background: transparent; border: 0; padding: 2px; min-height: 0; border-radius: 5px; }}
     QPushButton#iconButton:hover {{ background: #35494a; }}
     QFrame#titleBar {{ background: transparent; border: 0; }}
+    QFrame#profileControls {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 10px; }}
+    QLabel#profileLabel {{ color: {MUTED}; font-size: 8pt; font-weight: 600; }}
+    QFrame#profileDivider {{ background: {BORDER}; border: 0; }}
+    QComboBox#profileSelector {{ background: transparent; border: 0; border-radius: 6px; padding: 3px 4px; }}
+    QComboBox#profileSelector:hover {{ background: {SURFACE_HOVER}; }}
+    QComboBox#profileSelector:focus {{ background: {SURFACE_HOVER}; border: 0; }}
 
     QPushButton, QToolButton {{
         color: {TEXT}; background: {ELEVATED}; font-weight: 700;

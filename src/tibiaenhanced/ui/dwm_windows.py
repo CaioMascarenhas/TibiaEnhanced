@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLine
 
 from .design import icon
 
-from tibiaenhanced.models import Region
+from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
 from tibiaenhanced.services.windowing import get_client_area
 
@@ -150,9 +150,10 @@ class DwmRegionDialog(QDialog):
         pan_hint.setToolTip("Use a roda do mouse para zoom e arraste com o botão do meio para mover a imagem")
         self._coordinates = QLabel("Nenhuma área selecionada", self)
         self._coordinates.setGeometry(12, self._display.bottom() + 44, self.width() - 24, 25)
-        name_label = QLabel("Nome do recorte", self)
+        name_label = QLabel(f"Nome do recorte (até {NAME_MAX_LENGTH} caracteres)", self)
         name_label.setGeometry(12, self._display.bottom() + 75, self.width() - 24, 20)
         self.name_input = QLineEdit(self)
+        self.name_input.setMaxLength(NAME_MAX_LENGTH)
         self.name_input.setText(suggested_name)
         self.name_input.setGeometry(12, self._display.bottom() + 97,
                                     self.width() - 24, 32)
