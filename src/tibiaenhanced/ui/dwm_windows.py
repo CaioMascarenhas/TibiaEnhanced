@@ -5,9 +5,9 @@ import time
 from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QCloseEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion
-from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QLabel, QLineEdit,
-                               QMessageBox, QPushButton, QWidget)
+from PySide6.QtGui import QColor, QCloseEvent, QContextMenuEvent, QCursor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QRegion, QWheelEvent
+from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLineEdit,
+                               QMenu, QMessageBox, QPushButton, QWidget)
 
 from .design import icon
 
@@ -91,23 +91,28 @@ class DwmRegionDialog(QDialog):
         self._overlay: _SelectionOverlay | None = None
         self._start: QPoint | None = None
         self._selected = QRect()
-        self._source_size = (1, 1)
         area = get_client_area(hwnd)
+        self._source_size = (area.width, area.height)
+        self._zoom = 1.0
+        self._view_x = 0.0
+        self._view_y = 0.0
+        self._pan_origin: QPoint | None = None
+        self._pan_view = (0.0, 0.0)
         screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         available = screen.availableGeometry() if screen else QRect(0, 0, 1280, 800)
         max_width = max(300, min(1000, available.width() - 80))
-        max_height = max(180, min(650, available.height() - 210))
+        max_height = max(180, min(650, available.height() - 250))
         scale = min(1.0, max_width / area.width, max_height / area.height)
         self._display = QRect(12, 46, max(100, round(area.width * scale)),
                               max(80, round(area.height * scale)))
         self.setWindowTitle("Novo recorte")
         self.setObjectName("dwmRegionDialog")
-        self.setFixedSize(self._display.width() + 24, self._display.bottom() + 152)
+        self.setFixedSize(self._display.width() + 24, self._display.bottom() + 188)
         outline = QPainterPath()
         outline.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 12, 12)
         self.setMask(QRegion(outline.toFillPolygon().toPolygon()))
         self.setStyleSheet("QDialog#dwmRegionDialog { background: #292c40; color: #f1f3f8; }")
-        heading = QLabel("Arraste na imagem para marcar a área do novo espelho.", self)
+        heading = QLabel("Arraste na imagem para marcar o recorte.", self)
         heading.setGeometry(12, 4, self.width() - 58, 20)
         heading.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         close = QPushButton(self)
@@ -120,23 +125,54 @@ class DwmRegionDialog(QDialog):
         source = QLabel(f"Janela de origem: {source_title}", self)
         source.setObjectName("mutedText")
         source.setGeometry(12, 25, self.width() - 24, 18)
+        source.setToolTip(source_title)
+        source.setText(source.fontMetrics().elidedText(
+            f"Janela de origem: {source_title}", Qt.TextElideMode.ElideRight, source.width()))
+        controls_y = self._display.bottom() + 8
+        zoom_label = QLabel("Zoom", self)
+        zoom_label.setGeometry(12, controls_y, 42, 28)
+        self.zoom_out = QPushButton("−", self)
+        self.zoom_out.setGeometry(57, controls_y, 28, 28)
+        self.zoom_out.setToolTip("Reduzir zoom")
+        self.zoom_out.clicked.connect(lambda: self._set_zoom(self._zoom / 1.25))
+        self.zoom_value = QLabel("100%", self)
+        self.zoom_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.zoom_value.setGeometry(89, controls_y, 53, 28)
+        self.zoom_value.setToolTip("Use Ctrl + roda do mouse para ampliar; botão do meio para mover")
+        self.zoom_in = QPushButton("+", self)
+        self.zoom_in.setGeometry(146, controls_y, 28, 28)
+        self.zoom_in.setToolTip("Ampliar zoom")
+        self.zoom_in.clicked.connect(lambda: self._set_zoom(self._zoom * 1.25))
+        self.zoom_out.setEnabled(False)
+        pan_hint = QLabel("Meio: mover", self)
+        pan_hint.setObjectName("mutedText")
+        pan_hint.setGeometry(181, controls_y, self.width() - 193, 28)
+        pan_hint.setToolTip("Use a roda do mouse para zoom e arraste com o botão do meio para mover a imagem")
         self._coordinates = QLabel("Nenhuma área selecionada", self)
-        self._coordinates.setGeometry(12, self._display.bottom() + 8, self.width() - 24, 25)
+        self._coordinates.setGeometry(12, self._display.bottom() + 44, self.width() - 24, 25)
         name_label = QLabel("Nome do recorte", self)
-        name_label.setGeometry(12, self._display.bottom() + 39, self.width() - 24, 20)
+        name_label.setGeometry(12, self._display.bottom() + 75, self.width() - 24, 20)
         self.name_input = QLineEdit(self)
         self.name_input.setText(suggested_name)
-        self.name_input.setGeometry(12, self._display.bottom() + 61,
+        self.name_input.setGeometry(12, self._display.bottom() + 97,
                                     self.width() - 24, 32)
         self.name_input.textChanged.connect(self._update_ok_state)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
-                                   QDialogButtonBox.StandardButton.Cancel, self)
-        buttons.setGeometry(12, self._display.bottom() + 104, self.width() - 24, 36)
-        self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
-        self._ok.setText("Criar espelho")
+        actions = QWidget(self)
+        actions.setGeometry(12, self._display.bottom() + 140, self.width() - 24, 36)
+        buttons = QHBoxLayout(actions)
+        buttons.setContentsMargins(0, 0, 0, 0)
+        buttons.setSpacing(8)
+        buttons.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.setMinimumWidth(92)
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        self._ok = QPushButton("Criar espelho")
+        self._ok.setObjectName("primaryButton")
+        self._ok.setMinimumWidth(124)
         self._ok.setEnabled(False)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
+        self._ok.clicked.connect(self.accept)
+        buttons.addWidget(self._ok)
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     @property
@@ -170,24 +206,77 @@ class DwmRegionDialog(QDialog):
             return
         area = get_client_area(self._hwnd)
         self._source_size = (area.width, area.height)
+        region = self._view_region()
         ratio = self.devicePixelRatioF()
         r = self._display
-        self._mirror.update(None, tuple(round(v * ratio) for v in
-                                        (r.x(), r.y(), r.width(), r.height())))
+        self._mirror.update(region, tuple(round(v * ratio) for v in
+                                          (r.x(), r.y(), r.width(), r.height())))
+
+    def _view_region(self) -> Region:
+        source_w, source_h = self._source_size
+        width = max(1, round(source_w / self._zoom))
+        height = max(1, round(source_h / self._zoom))
+        x = max(0, min(round(self._view_x), source_w - width))
+        y = max(0, min(round(self._view_y), source_h - height))
+        return Region("Zoom", x, y, width, height)
+
+    def _set_zoom(self, zoom: float, anchor: QPoint | None = None) -> None:
+        new_zoom = max(1.0, min(8.0, zoom))
+        if new_zoom == self._zoom:
+            return
+        view = self._view_region()
+        if anchor is None:
+            anchor = QPoint(self._display.width() // 2, self._display.height() // 2)
+        fx = max(0.0, min(1.0, anchor.x() / self._display.width()))
+        fy = max(0.0, min(1.0, anchor.y() / self._display.height()))
+        source_x = view.x + fx * view.width
+        source_y = view.y + fy * view.height
+        self._zoom = new_zoom
+        source_w, source_h = self._source_size
+        width = max(1, round(source_w / new_zoom))
+        height = max(1, round(source_h / new_zoom))
+        self._view_x = max(0.0, min(source_x - fx * width, source_w - width))
+        self._view_y = max(0.0, min(source_y - fy * height, source_h - height))
+        self.zoom_value.setText(f"{round(new_zoom * 100)}%")
+        self.zoom_out.setEnabled(new_zoom > 1.0)
+        self.zoom_in.setEnabled(new_zoom < 8.0)
+        self._update_mirror()
+        self._sync_overlay_selection()
+
+    def _sync_overlay_selection(self) -> None:
+        if self._overlay is None:
+            return
+        if self._selected.isEmpty():
+            self._overlay.set_selection(QRect())
+            return
+        view = self._view_region()
+        r = self._display
+        left = round((self._selected.left() - view.x) * r.width() / view.width)
+        top = round((self._selected.top() - view.y) * r.height() / view.height)
+        right = round((self._selected.x() + self._selected.width() - view.x) * r.width() / view.width)
+        bottom = round((self._selected.y() + self._selected.height() - view.y) * r.height() / view.height)
+        self._overlay.set_selection(QRect(left, top, right - left, bottom - top).intersected(
+            QRect(0, 0, r.width(), r.height())))
 
     def _on_overlay_selection(self, rect: QRect) -> None:
         r = self._display
-        source_w, source_h = self._source_size
-        x = round(rect.x() * source_w / r.width())
-        y = round(rect.y() * source_h / r.height())
-        right = round((rect.x() + rect.width()) * source_w / r.width())
-        bottom = round((rect.y() + rect.height()) * source_h / r.height())
+        view = self._view_region()
+        x = view.x + round(rect.x() * view.width / r.width())
+        y = view.y + round(rect.y() * view.height / r.height())
+        right = view.x + round((rect.x() + rect.width()) * view.width / r.width())
+        bottom = view.y + round((rect.y() + rect.height()) * view.height / r.height())
         self._selected = QRect(x, y, right - x, bottom - y)
         self._update_ok_state()
         self._coordinates.setText(
             f"x={x}, y={y}, {self._selected.width()} × {self._selected.height()} px")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.MiddleButton and self._display.contains(event.position().toPoint()):
+            self._pan_origin = event.position().toPoint()
+            self._pan_view = (self._view_x, self._view_y)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+            return
         if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 25:
             handle = self.windowHandle()
             if handle is None or not handle.startSystemMove():
@@ -199,9 +288,20 @@ class DwmRegionDialog(QDialog):
             if self._overlay is not None:
                 self._overlay.set_selection(QRect())
             self._selected = QRect()
+            self._coordinates.setText("Nenhuma área selecionada")
             self._update_ok_state()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._pan_origin is not None and event.buttons() & Qt.MouseButton.MiddleButton:
+            delta = event.position().toPoint() - self._pan_origin
+            view = self._view_region()
+            source_w, source_h = self._source_size
+            self._view_x = max(0.0, min(self._pan_view[0] - delta.x() * view.width / self._display.width(), source_w - view.width))
+            self._view_y = max(0.0, min(self._pan_view[1] - delta.y() * view.height / self._display.height(), source_h - view.height))
+            self._update_mirror()
+            self._sync_overlay_selection()
+            event.accept()
+            return
         if self._drag_origin is not None and event.buttons() & Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self._drag_origin)
             event.accept()
@@ -218,10 +318,24 @@ class DwmRegionDialog(QDialog):
         self._on_overlay_selection(rect)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.MiddleButton and self._pan_origin is not None:
+            self._pan_origin = None
+            self.setCursor(Qt.CursorShape.CrossCursor)
+            event.accept()
+            return
         self._drag_origin = None
         if event.button() == Qt.MouseButton.LeftButton and self._start is not None:
             self.mouseMoveEvent(event)
             self._start = None
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        if self._display.contains(event.position().toPoint()):
+            steps = event.angleDelta().y() / 120
+            if steps:
+                self._set_zoom(self._zoom * (1.25 ** steps), event.position().toPoint() - self._display.topLeft())
+            event.accept()
+            return
+        super().wheelEvent(event)
 
     def moveEvent(self, event) -> None:
         super().moveEvent(event)
@@ -240,6 +354,7 @@ class DwmRegionDialog(QDialog):
 
 class DwmMirrorWindow(QWidget):
     stopped = Signal(str)
+    action_requested = Signal(str)
 
     def __init__(self, hwnd: int, region: Region, *, fit_mode: str = "contain") -> None:
         super().__init__()
@@ -430,6 +545,22 @@ class DwmMirrorWindow(QWidget):
             self._drag_origin = None
             self._drag_geometry = None
             self._resize_edges = Qt.Edges()
+
+    def _context_menu(self) -> QMenu:
+        menu = QMenu(self)
+        menu.addAction("Ocultar espelho", lambda: self.action_requested.emit("hide"))
+        menu.addAction("Bloquear cliques", lambda: self.action_requested.emit("lock"))
+        menu.addSeparator()
+        menu.addAction("Excluir recorte", lambda: self.action_requested.emit("delete"))
+        return menu
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        if self._locked:
+            return
+        menu = self._context_menu()
+        menu.exec(event.globalPos())
+        menu.deleteLater()
+        event.accept()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self._timer.stop()

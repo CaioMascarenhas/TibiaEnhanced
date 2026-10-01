@@ -219,6 +219,8 @@ class CapturePanel(QWidget):
         mirror = DwmMirrorWindow(hwnd, region)
         mirror.stopped.connect(lambda message, mirror_key=key:
                                self._on_mirror_stopped(mirror_key, message))
+        mirror.action_requested.connect(lambda action, mirror_key=key:
+                                        self._mirror_action(mirror_key, action))
         entry = MirrorEntry(key, hwnd, source_title, region, mirror)
         self._entries[key] = entry
         self._refresh_cards(key)
@@ -234,6 +236,15 @@ class CapturePanel(QWidget):
     def _card_action(self, key: int, action) -> None:
         self._select_entry(key)
         action()
+
+    def _mirror_action(self, key: int, action: str) -> None:
+        callbacks = {
+            "hide": self.toggle_visibility,
+            "lock": self.toggle_lock,
+            "delete": self.delete_current,
+        }
+        if key in self._entries and action in callbacks:
+            self._card_action(key, callbacks[action])
 
     def _edit_entry(self) -> None:
         self.details_dialog.exec()

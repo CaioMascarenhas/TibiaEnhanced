@@ -81,6 +81,21 @@ class MirrorManagementTests(unittest.TestCase):
         self.assertEqual([entry.region.name for entry in panel.entries], ["HP"])
         panel.shutdown()
 
+    def test_mirror_menu_actions_update_panel_entry(self) -> None:
+        with patch("tibiaenhanced.ui.capture_panel.list_windows", return_value=[]):
+            panel = CapturePanel()
+        window = _FakeWindow()
+        window.stopped.connect(lambda message: panel._on_mirror_stopped(1, message))
+        panel._entries[1] = MirrorEntry(1, 42, "Tibia", Region("HP", 0, 0, 100, 40), window)
+        panel._show_entry(panel._entries[1])
+        panel._mirror_action(1, "lock")
+        self.assertTrue(panel._entries[1].locked)
+        panel._mirror_action(1, "hide")
+        self.assertFalse(panel._entries[1].visible)
+        panel._mirror_action(1, "delete")
+        self.assertFalse(panel._entries)
+        panel.shutdown()
+
 
 if __name__ == "__main__":
     unittest.main()
