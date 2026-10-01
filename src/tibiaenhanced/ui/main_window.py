@@ -40,7 +40,7 @@ class TitleBar(QFrame):
         self.setFixedHeight(44)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 5, 11, 5)
-        layout.setSpacing(9)
+        layout.setSpacing(0)
 
         emblem = QLabel()
         emblem.setObjectName("brandIcon")
@@ -50,6 +50,7 @@ class TitleBar(QFrame):
                          .scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
                                  Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(emblem)
+        layout.addSpacing(9)
         brand = QVBoxLayout()
         brand.setSpacing(0)
         title = QLabel("Tibia Enhanced")
@@ -59,33 +60,56 @@ class TitleBar(QFrame):
         layout.addLayout(brand)
         layout.addStretch()
 
+        self.profile_controls = QFrame()
+        profile_row = QHBoxLayout(self.profile_controls)
+        profile_row.setContentsMargins(0, 0, 0, 0)
+        profile_row.setSpacing(5)
         profile_label = QLabel("Perfil")
         profile_label.setObjectName("mutedText")
-        layout.addWidget(profile_label)
+        profile_row.addWidget(profile_label)
         self.profile_combo = QComboBox()
-        self.profile_combo.setFixedWidth(135)
+        self.profile_combo.setMinimumWidth(90)
+        self.profile_combo.setMaximumWidth(125)
         self.profile_combo.setToolTip("Perfil local de recortes e alertas")
         self.profile_combo.currentTextChanged.connect(window._switch_profile)
-        layout.addWidget(self.profile_combo)
+        profile_row.addWidget(self.profile_combo)
         create_profile = QPushButton()
         create_profile.setObjectName("iconButton")
-        create_profile.setFixedSize(27, 27)
+        create_profile.setFixedSize(24, 27)
         create_profile.setIcon(icon("plus", size=16))
         create_profile.setToolTip("Criar perfil")
         create_profile.setAccessibleName("Criar perfil")
         create_profile.clicked.connect(window._create_profile)
-        layout.addWidget(create_profile)
+        profile_row.addWidget(create_profile)
+        manage_profile = QPushButton()
+        manage_profile.setObjectName("iconButton")
+        manage_profile.setFixedSize(24, 27)
+        manage_profile.setIcon(icon("pencil", size=15))
+        manage_profile.setToolTip("Gerenciar perfil")
+        manage_profile.setAccessibleName("Gerenciar perfil")
+        self.profile_menu = QMenu(manage_profile)
+        self.profile_menu.addAction("Renomear perfil", window._rename_profile)
+        self.delete_profile_action = self.profile_menu.addAction("Excluir perfil", window._delete_profile)
+        manage_profile.clicked.connect(lambda: self.profile_menu.popup(
+            manage_profile.mapToGlobal(QPoint(0, manage_profile.height()))))
+        profile_row.addWidget(manage_profile)
+        layout.addWidget(self.profile_controls)
+        layout.addStretch()
+        layout.addSpacing(16)
+        chrome = QHBoxLayout()
+        chrome.setSpacing(0)
 
         minimize = self._control("minus", "Minimizar")
         minimize.clicked.connect(window.showMinimized)
-        layout.addWidget(minimize)
+        chrome.addWidget(minimize)
         self.maximize_button = self._control("square", "Maximizar")
         self.maximize_button.clicked.connect(window.toggle_maximized)
-        layout.addWidget(self.maximize_button)
+        chrome.addWidget(self.maximize_button)
         close = self._control("x", "Fechar")
         close.setObjectName("chromeCloseButton")
         close.clicked.connect(window.close)
-        layout.addWidget(close)
+        chrome.addWidget(close)
+        layout.addLayout(chrome)
 
     def _control(self, name: str, tooltip: str) -> QPushButton:
         button = QPushButton()
@@ -185,7 +209,7 @@ class MainWindow(QMainWindow):
             Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         self.author_link.setContentsMargins(10, 3, 8, 5)
-        self.statusBar().addWidget(self.author_link)
+        self.statusBar().addPermanentWidget(self.author_link)
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self._setup_tray()
@@ -196,7 +220,9 @@ class MainWindow(QMainWindow):
         combo.clear()
         combo.addItems(self._profile_store.data["profiles"])
         combo.setCurrentText(self._profile_store.active_name)
+        combo.setToolTip(f"Perfil local: {self._profile_store.active_name}")
         combo.blockSignals(False)
+        self._title_bar.delete_profile_action.setEnabled(len(self._profile_store.data["profiles"]) > 1)
 
     def _load_active_profile(self) -> list[str]:
         self._profile_loading = True
@@ -249,33 +275,86 @@ class MainWindow(QMainWindow):
     def _create_profile(self) -> None:
         if not self._profiles_enabled:
             return
-        dialog = StyledDialog(self, "Novo perfil")
-        dialog.setMinimumWidth(330)
-        field = QLineEdit()
-        field.setPlaceholderText("Nome do perfil ou personagem")
-        dialog.content_layout.addWidget(field)
-        actions = QHBoxLayout()
-        actions.addStretch()
-        cancel = QPushButton("Cancelar")
-        cancel.clicked.connect(dialog.reject)
-        create = QPushButton("Criar perfil")
-        create.setObjectName("primaryButton")
-        create.clicked.connect(dialog.accept)
-        actions.addWidget(cancel)
-        actions.addWidget(create)
-        dialog.content_layout.addLayout(actions)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-        if not self._save_profile():
+        name = self._ask_profile_name("Novo perfil", "", "Criar perfil")
+        if name is None or not self._save_profile():
             return
         try:
-            self._profile_store.create(field.text())
+            self._profile_store.create(name)
         except (OSError, ValueError) as exc:
             QMessageBox.warning(self, "Perfil não criado", str(exc))
             return
         self._refresh_profile_combo()
         self._load_active_profile()
         self.statusBar().showMessage(f"Perfil '{self._profile_store.active_name}' criado.", 5000)
+
+    def _ask_profile_name(self, title: str, initial: str, action: str) -> str | None:
+        dialog = StyledDialog(self, title)
+        dialog.setMinimumWidth(330)
+        field = QLineEdit(initial)
+        field.setMaxLength(80)
+        field.setPlaceholderText("Nome do perfil ou personagem")
+        dialog.content_layout.addWidget(field)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(dialog.reject)
+        create = QPushButton(action)
+        create.setObjectName("primaryButton")
+        create.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(create)
+        dialog.content_layout.addLayout(actions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return field.text()
+
+    def _rename_profile(self) -> None:
+        if not self._profiles_enabled:
+            return
+        previous = self._profile_store.active_name
+        name = self._ask_profile_name("Renomear perfil", previous, "Salvar")
+        if name is None or not self._save_profile():
+            return
+        try:
+            self._profile_store.rename(previous, name)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Perfil não renomeado", str(exc))
+            return
+        self._refresh_profile_combo()
+        self.statusBar().showMessage(f"Perfil renomeado para '{self._profile_store.active_name}'.", 5000)
+
+    def _delete_profile(self) -> None:
+        if not self._profiles_enabled or len(self._profile_store.data["profiles"]) < 2:
+            return
+        name = self._profile_store.active_name
+        dialog = StyledDialog(self, "Excluir perfil")
+        dialog.setMinimumWidth(350)
+        message = QLabel(f"Excluir o perfil '{name}' e suas configurações?")
+        message.setWordWrap(True)
+        dialog.content_layout.addWidget(message)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(dialog.reject)
+        delete = QPushButton("Excluir perfil")
+        delete.setObjectName("dangerButton")
+        delete.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(delete)
+        dialog.content_layout.addLayout(actions)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._save_timer.stop()
+        try:
+            self._profile_store.delete(name)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Perfil não excluído", str(exc))
+            return
+        self._refresh_profile_combo()
+        warnings = self._load_active_profile()
+        if warnings:
+            self._show_profile_warnings(warnings)
+        self.statusBar().showMessage(f"Perfil '{name}' excluído. '{self._profile_store.active_name}' ativado.", 5000)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -383,14 +462,50 @@ class MainWindow(QMainWindow):
         self.close()
         QApplication.instance().quit()
 
+    def _ask_close_action(self) -> str | None:
+        dialog = StyledDialog(self, "Fechar Tibia Enhanced")
+        dialog.setMinimumWidth(450)
+        message = QLabel("Deseja encerrar o aplicativo ou mantê-lo na bandeja do sistema?")
+        message.setWordWrap(True)
+        dialog.content_layout.addWidget(message)
+        actions = QHBoxLayout()
+        actions.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(dialog.reject)
+        minimize = QPushButton("Minimizar para a bandeja")
+        minimize.setEnabled(self._tray is not None)
+        if self._tray is None:
+            minimize.setToolTip("A bandeja do sistema não está disponível.")
+        minimize.clicked.connect(lambda: dialog.done(2))
+        close = QPushButton("Fechar aplicativo")
+        close.setObjectName("primaryButton")
+        close.clicked.connect(dialog.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(minimize)
+        actions.addWidget(close)
+        dialog.content_layout.addLayout(actions)
+        result = dialog.exec()
+        if result == 2:
+            return "tray"
+        return "exit" if result == QDialog.DialogCode.Accepted else None
+
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._tray is not None and not self._exiting:
-            self._save_profile()
+        if self._exiting:
+            event.accept()
+            return
+        action = self._ask_close_action()
+        if action is None or not self._save_profile():
+            event.ignore()
+            return
+        if action == "tray":
             self.hide()
             event.ignore()
-        else:
-            if not self._exiting and not self._save_profile():
-                event.ignore()
-                return
-            self.capture_panel.shutdown()
-            event.accept()
+            return
+        if not self.capture_panel.shutdown():
+            event.ignore()
+            return
+        self._exiting = True
+        if self._tray is not None:
+            self._tray.hide()
+        event.accept()
+        QApplication.instance().quit()

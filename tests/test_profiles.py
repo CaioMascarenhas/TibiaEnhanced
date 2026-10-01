@@ -5,10 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication, QDialog  # noqa: E402
+from PySide6.QtGui import QCloseEvent  # noqa: E402
 
 from tibiaenhanced.services.audio_timer import AudioTimer  # noqa: E402
 from tibiaenhanced.services.profiles import ProfileStore  # noqa: E402
@@ -40,6 +43,26 @@ class ProfileTests(unittest.TestCase):
             warnings = ProfileStore(path).load()
             self.assertTrue(warnings)
             self.assertTrue(list(Path(folder).glob("profiles-invalid-*.json")))
+
+    def test_rename_and_delete_preserve_other_profiles_and_rollback_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            store = ProfileStore(Path(folder) / "profiles.json")
+            store.create("Knight")
+            store.active["audio"] = {"master_volume": 73}
+            store.rename("Knight", "Sorcerer")
+            self.assertEqual(store.active_name, "Sorcerer")
+            self.assertEqual(store.active["audio"]["master_volume"], 73)
+            with patch.object(store, "save", side_effect=OSError("disk failure")):
+                with self.assertRaises(OSError):
+                    store.delete("Sorcerer")
+            self.assertEqual(store.active_name, "Sorcerer")
+            store.delete("Sorcerer")
+            reloaded = ProfileStore(store.path)
+            self.assertEqual(reloaded.load(), [])
+            self.assertEqual(reloaded.active_name, "Padrão")
+            self.assertEqual(list(reloaded.data["profiles"]), ["Padrão"])
+            with self.assertRaises(ValueError):
+                store.delete("Padrão")
 
     def test_audio_configuration_restores_without_starting_timers(self) -> None:
         panel = AudioPanel()
@@ -137,6 +160,50 @@ class ProfileTests(unittest.TestCase):
             window._exiting = True
             window.capture_panel.shutdown()
             window.close()
+
+    def test_profile_actions_rename_without_reset_and_delete_with_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            store = ProfileStore(Path(folder) / "profiles.json")
+            store.create("Knight")
+            with patch("tibiaenhanced.ui.capture_panel.list_windows", return_value=[]):
+                window = MainWindow(store)
+            window.audio_panel.cards[0].timer.start()
+            with patch.object(window, "_ask_profile_name", return_value="Sorcerer"):
+                window._rename_profile()
+            self.assertTrue(window.audio_panel.cards[0].timer.running)
+            self.assertEqual(window._title_bar.profile_combo.currentText(), "Sorcerer")
+            with patch("tibiaenhanced.ui.main_window.StyledDialog.exec",
+                       return_value=QDialog.DialogCode.Accepted):
+                window._delete_profile()
+            self.assertEqual(store.active_name, "Padrão")
+            self.assertFalse(window._title_bar.delete_profile_action.isEnabled())
+            self.assertFalse(window.audio_panel.cards[0].timer.running)
+            window._exiting = True
+            window.capture_panel.shutdown()
+            window.close()
+
+    def test_close_choice_can_cancel_hide_to_tray_or_exit(self) -> None:
+        with patch("tibiaenhanced.ui.capture_panel.list_windows", return_value=[]):
+            window = MainWindow()
+        window.show()
+        event = QCloseEvent()
+        with patch.object(window, "_ask_close_action", return_value=None):
+            window.closeEvent(event)
+        self.assertFalse(event.isAccepted())
+        self.assertTrue(window.isVisible())
+        with patch.object(window, "_ask_close_action", return_value="tray"):
+            window.closeEvent(event)
+        self.assertFalse(event.isAccepted())
+        self.assertFalse(window.isVisible())
+        quit_app = Mock()
+        with patch.object(window, "_ask_close_action", return_value="exit"), patch(
+                "tibiaenhanced.ui.main_window.QApplication.instance",
+                return_value=SimpleNamespace(quit=quit_app)):
+            window.closeEvent(event)
+        self.assertTrue(event.isAccepted())
+        quit_app.assert_called_once()
+        self.assertTrue(window._exiting)
+        window.close()
 
 
 if __name__ == "__main__":

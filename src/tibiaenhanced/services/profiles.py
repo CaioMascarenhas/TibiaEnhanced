@@ -105,6 +105,47 @@ class ProfileStore:
             self.data["active_profile"] = previous
             raise
 
+    def rename(self, name: str, new_name: str) -> None:
+        new_name = new_name.strip()
+        profiles = self.data["profiles"]
+        if name not in profiles:
+            raise ValueError("Perfil não encontrado")
+        if not new_name or len(new_name) > 80:
+            raise ValueError("Informe um nome de até 80 caracteres.")
+        if any(existing != name and existing.casefold() == new_name.casefold()
+               for existing in profiles):
+            raise ValueError("Já existe um perfil com esse nome.")
+        previous = self.data
+        self.data = {
+            **previous,
+            "profiles": {new_name if key == name else key: value for key, value in profiles.items()},
+            "active_profile": new_name if self.active_name == name else self.active_name,
+        }
+        try:
+            self.save()
+        except OSError:
+            self.data = previous
+            raise
+
+    def delete(self, name: str) -> None:
+        profiles = self.data["profiles"]
+        if name not in profiles:
+            raise ValueError("Perfil não encontrado")
+        if len(profiles) == 1:
+            raise ValueError("Mantenha pelo menos um perfil.")
+        remaining = {key: value for key, value in profiles.items() if key != name}
+        previous = self.data
+        self.data = {
+            **previous,
+            "profiles": remaining,
+            "active_profile": next(iter(remaining)) if self.active_name == name else self.active_name,
+        }
+        try:
+            self.save()
+        except OSError:
+            self.data = previous
+            raise
+
     def save(self) -> None:
         if self._save_blocked:
             raise OSError("o arquivo inválido não pôde ser copiado; gravação desativada")
