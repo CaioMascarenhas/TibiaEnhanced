@@ -14,7 +14,7 @@ from tibiaenhanced.ui.dialog_shell import StyledDialog  # noqa: E402
 from tibiaenhanced.ui.audio_panel import TimerDialog, AudioPanel  # noqa: E402
 from tibiaenhanced.ui.capture_panel import CapturePanel  # noqa: E402
 from tibiaenhanced.ui.window_selector import WindowSelector  # noqa: E402
-from tibiaenhanced.ui.design import CompactSlider  # noqa: E402
+from tibiaenhanced.ui.design import CompactSlider, medieval_cursor  # noqa: E402
 
 from tibiaenhanced.ui.design import ASSETS, HoverEffects, InteractionCursors, heading_font, icon, load_fonts  # noqa: E402
 from tibiaenhanced.ui.palette import ACCENT  # noqa: E402
@@ -55,16 +55,30 @@ class ModernUiTests(unittest.TestCase):
         self.assertFalse(window.isMaximized())
         window.exit_app()
 
-    def test_dynamic_buttons_have_pointer_and_disabled_buttons_arrow(self) -> None:
+    def test_dynamic_buttons_have_medieval_action_and_disabled_cursor(self) -> None:
         cursors = InteractionCursors(self.app)
         self.app.installEventFilter(cursors)
         button = QPushButton("Novo")
         button.ensurePolished()
-        self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
+        self.assertEqual(button.cursor().pixmap().toImage(),
+                         medieval_cursor(True, button.devicePixelRatioF()).pixmap().toImage())
         button.setEnabled(False)
-        self.assertEqual(button.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        self.assertEqual(button.cursor().pixmap().toImage(),
+                         medieval_cursor(False, button.devicePixelRatioF()).pixmap().toImage())
         button.setEnabled(True)
-        self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
+        self.assertEqual(button.cursor().pixmap().toImage(),
+                         medieval_cursor(True, button.devicePixelRatioF()).pixmap().toImage())
+        dialog = StyledDialog(None, "Cursor")
+        dialog.ensurePolished()
+        self.assertEqual(dialog.cursor().shape(), Qt.CursorShape.BitmapCursor)
+        dialog.setCursor(Qt.CursorShape.CrossCursor)
+        self.app.sendEvent(dialog, QEvent(QEvent.Type.Enter))
+        self.assertEqual(dialog.cursor().shape(), Qt.CursorShape.CrossCursor)
+        for ratio in (1.0, 1.5, 2.0):
+            cursor = medieval_cursor(False, ratio)
+            self.assertFalse(cursor.pixmap().isNull())
+            self.assertEqual(cursor.pixmap().width(), round(32 * ratio))
+            self.assertEqual(cursor.hotSpot(), QPoint(3, 2))
         self.app.removeEventFilter(cursors)
 
     def test_resize_cursor_resets_when_entering_child_content(self) -> None:
@@ -97,22 +111,22 @@ class ModernUiTests(unittest.TestCase):
                 self.app.sendEvent(label, QEnterEvent(
                     QPointF(inside), QPointF(window.mapFromGlobal(global_inside)),
                     QPointF(global_inside)))
-                self.assertEqual(label.cursor().shape(), Qt.CursorShape.ArrowCursor)
+                self.assertEqual(label.cursor().shape(), Qt.CursorShape.BitmapCursor)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         window._update_resize_cursor(QPoint(1, 200))
         local = button.rect().center()
         global_point = button.mapToGlobal(local)
         self.app.sendEvent(button, QEnterEvent(
             QPointF(local), QPointF(window.mapFromGlobal(global_point)), QPointF(global_point)))
-        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.BitmapCursor)
         self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
         window._update_resize_cursor(QPoint(200, 1))
         self.app.sendEvent(window, QEvent(QEvent.Type.Leave))
-        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.BitmapCursor)
         window._update_resize_cursor(QPoint(1, 200))
         window.showMaximized()
         self.app.processEvents()
-        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.BitmapCursor)
         window.exit_app()
 
     def test_settings_dialogs_share_rounded_chrome_and_palette(self) -> None:

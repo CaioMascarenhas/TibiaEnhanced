@@ -28,6 +28,7 @@ DEFAULT_TIMERS = (
     ("Potions 10min", 600, ASSETS / "audios" / "potionacabou.mp3",
      tuple(sorted((ASSETS / "imgs" / "potions_10min").glob("*.png")))),
 )
+BUNDLED_SOUNDS = {item[2].name: item[2] for item in DEFAULT_TIMERS}
 
 
 def _clock_text(seconds: int) -> str:
@@ -443,15 +444,21 @@ class AudioPanel(QWidget):
         timers = []
         for index, card in enumerate(self.cards):
             timer = card.timer
-            timers.append({
+            sound_asset = next((name for name, path in BUNDLED_SOUNDS.items()
+                                if timer.sound_file.resolve() == path.resolve()), None)
+            record = {
                 "default_id": index if not card.removable else None,
                 "name": timer.name,
                 "duration_seconds": timer.duration_seconds,
-                "sound_file": str(timer.sound_file.resolve()),
+                "sound_file": (f"audios/{sound_asset}" if sound_asset
+                               else str(timer.sound_file.resolve())),
                 "volume": timer.volume,
                 "loop": timer.loop,
                 "shortcut": timer.shortcut,
-            })
+            }
+            if sound_asset:
+                record["sound_asset"] = sound_asset
+            timers.append(record)
         return {"master_volume": self.master_volume.value(), "timers": timers}
 
     def load_state(self, state: dict) -> list[str]:
@@ -514,18 +521,30 @@ class AudioPanel(QWidget):
         volume = record.get("volume")
         loop = record.get("loop")
         shortcut = record.get("shortcut", "")
+        sound_asset = record.get("sound_asset")
         if (not isinstance(name, str) or not name.strip() or
                 type(duration) is not int or not 1 <= duration <= 86400 or
                 not isinstance(sound, str) or Path(sound).suffix.lower() not in (".mp3", ".wav") or
                 type(volume) not in (int, float) or not 0 <= volume <= 1 or
-                type(loop) is not bool or not isinstance(shortcut, str)):
+                type(loop) is not bool or not isinstance(shortcut, str) or
+                (sound_asset is not None and (not isinstance(sound_asset, str)
+                                             or sound_asset not in BUNDLED_SOUNDS))):
             return ["Um alerta tem configuração inválida."]
+        sound_path = Path(sound)
+        # Configurações antigas gravavam o caminho da pasta do pacote, inclusive
+        # a pasta temporária de builds onefile. Não altere arquivos do usuário.
+        if (sound_asset is None and sound_path.name in BUNDLED_SOUNDS
+                and sound_path.parent.name == "audios"
+                and sound_path.parent.parent.name == "tibiaenhanced"):
+            sound_asset = sound_path.name
+        if sound_asset:
+            sound_path = BUNDLED_SOUNDS[sound_asset]
         warnings = []
         if len(name.strip()) > NAME_MAX_LENGTH:
             warnings.append(f"Nome do alerta abreviado para {NAME_MAX_LENGTH} caracteres: {name}")
         timer.name = name.strip()[:NAME_MAX_LENGTH]
         timer.duration_seconds = duration
-        timer.sound_file = Path(sound)
+        timer.sound_file = sound_path
         timer.volume = float(volume)
         timer.loop = loop
         timer.shortcut = shortcut

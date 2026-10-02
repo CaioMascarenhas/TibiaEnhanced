@@ -2,14 +2,14 @@
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox,
                                QPushButton, QScrollArea,
                                QVBoxLayout, QWidget)
 
 from tibiaenhanced.models import NAME_MAX_LENGTH, Region
-from tibiaenhanced.services.windowing import list_windows
+from tibiaenhanced.services.windowing import get_client_area, list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
 from .design import icon
 from .design import CompactSlider as QSlider
@@ -30,6 +30,7 @@ class MirrorEntry:
     transparency_percent: int = 0
     source_executable: str = ""
     source_class: str = ""
+    recovering: bool = False
 
 
 class CapturePanel(QWidget):
@@ -45,6 +46,9 @@ class CapturePanel(QWidget):
         self._cards = {}
         self._next_key = 1
         self._shutting_down = False
+        self._recovery_timer = QTimer(self)
+        self._recovery_timer.setInterval(1000)
+        self._recovery_timer.timeout.connect(self._poll_sources)
         self._build_ui()
         self.refresh_windows()
         self._update_controls()
@@ -188,19 +192,21 @@ class CapturePanel(QWidget):
 
     def refresh_windows(self) -> None:
         previous = self.window_combo.currentData()
-        self.window_combo.blockSignals(True)
-        self.window_combo.clear()
         try:
-            for window in list_windows():
-                self.window_combo.addItem(window.title, window.hwnd)
-                self.window_combo.setItemData(self.window_combo.count() - 1, window.title,
-                                              Qt.ItemDataRole.ToolTipRole)
-                self.window_combo.setItemData(self.window_combo.count() - 1,
-                                              getattr(window, "executable", ""), Qt.ItemDataRole.UserRole + 1)
-                self.window_combo.setItemData(self.window_combo.count() - 1,
-                                              getattr(window, "window_class", ""), Qt.ItemDataRole.UserRole + 2)
+            windows = list_windows()
         except Exception as exc:
             self.status_label.setText(f"Não foi possível listar as janelas: {exc}")
+            return
+        self.window_combo.blockSignals(True)
+        self.window_combo.clear()
+        for window in windows:
+            self.window_combo.addItem(window.title, window.hwnd)
+            self.window_combo.setItemData(self.window_combo.count() - 1, window.title,
+                                          Qt.ItemDataRole.ToolTipRole)
+            self.window_combo.setItemData(self.window_combo.count() - 1,
+                                          getattr(window, "executable", ""), Qt.ItemDataRole.UserRole + 1)
+            self.window_combo.setItemData(self.window_combo.count() - 1,
+                                          getattr(window, "window_class", ""), Qt.ItemDataRole.UserRole + 2)
         if previous is not None:
             index = self.window_combo.findData(previous)
             if index >= 0:
@@ -214,6 +220,68 @@ class CapturePanel(QWidget):
         self._update_controls()
         if self._pending_mirrors:
             self._restore_pending()
+        self._resume_waiting()
+
+    def _poll_sources(self) -> None:
+        if not self._shutting_down:
+            self.refresh_windows()
+
+    def _update_recovery_timer(self) -> None:
+        needed = self._pending_mirrors or any(entry.recovering for entry in self._entries.values())
+        if needed and not self._shutting_down:
+            self._recovery_timer.start()
+        else:
+            self._recovery_timer.stop()
+
+    def _source_match(self, title: str, executable: str, window_class: str,
+                      preferred_hwnd: int | None = None) -> int | None:
+        candidates = [index for index in range(self.window_combo.count())
+                      if (not window_class or self.window_combo.itemData(
+                          index, Qt.ItemDataRole.UserRole + 2) == window_class)
+                      and (self.window_combo.itemData(index, Qt.ItemDataRole.UserRole + 1) == executable
+                           if executable else self.window_combo.itemText(index) == title)]
+        preferred = [index for index in candidates
+                     if self.window_combo.itemData(index) == preferred_hwnd]
+        if len(preferred) == 1:
+            return preferred[0]
+        exact = [index for index in candidates if self.window_combo.itemText(index) == title]
+        if len(exact) == 1:
+            return exact[0]
+        return candidates[0] if len(candidates) == 1 else None
+
+    def _try_resume_entry(self, entry: MirrorEntry, match_override: int | None = None) -> bool:
+        match = match_override if match_override is not None else self._source_match(
+            entry.source_title, entry.source_executable, entry.source_class, entry.source_hwnd)
+        if match is None:
+            return False
+        hwnd = self.window_combo.itemData(match)
+        try:
+            area = get_client_area(hwnd)
+            if (entry.region.x + entry.region.width > area.width or
+                    entry.region.y + entry.region.height > area.height):
+                return False
+            entry.window.rebind_source(hwnd)
+        except RuntimeError:
+            return False
+        entry.source_hwnd = hwnd
+        entry.source_title = self.window_combo.itemText(match)
+        entry.source_executable = self.window_combo.itemData(match, Qt.ItemDataRole.UserRole + 1) or ""
+        entry.source_class = self.window_combo.itemData(match, Qt.ItemDataRole.UserRole + 2) or ""
+        entry.recovering = False
+        entry.visible = True
+        entry.window.show()
+        return True
+
+    def _resume_waiting(self) -> None:
+        resumed = False
+        for entry in self._entries.values():
+            if entry.recovering and self._try_resume_entry(entry):
+                resumed = True
+                self.status_label.setText(f"{entry.region.name}: espelho recuperado.")
+        if resumed:
+            self._refresh_cards()
+            self._changed()
+        self._update_recovery_timer()
 
     def add_mirror(self) -> None:
         hwnd = self.window_combo.currentData()
@@ -325,8 +393,9 @@ class CapturePanel(QWidget):
             if self._pending_mirrors else
             "Seus recortes aparecem aqui.\nEscolha uma janela e clique em Novo recorte."
         )
-        self.bind_button.setVisible(bool(self._pending_mirrors))
-        self.bind_button.setEnabled(bool(self._pending_mirrors)
+        awaiting = bool(self._pending_mirrors) or any(entry.recovering for entry in self._entries.values())
+        self.bind_button.setVisible(awaiting)
+        self.bind_button.setEnabled(awaiting
                                     and self.window_combo.currentData() is not None)
         for entry in self._entries.values():
             card = QFrame()
@@ -351,7 +420,9 @@ class CapturePanel(QWidget):
             actions.setSpacing(3)
             for name, tooltip, callback in (
                 ("pencil", "Configurar recorte", self._edit_entry),
-                ("eye" if entry.visible else "eye-off", "Ocultar" if entry.visible else "Mostrar", self.toggle_visibility),
+                ("eye" if entry.visible else "eye-off",
+                 "Cancelar recuperação" if entry.recovering else ("Ocultar" if entry.visible else "Mostrar"),
+                 self.toggle_visibility),
                 ("lock-keyhole" if entry.locked else "lock-keyhole-open", "Desbloquear" if entry.locked else "Bloquear cliques", self.toggle_lock),
                 ("trash", "Excluir recorte", self.delete_current),
             ):
@@ -383,8 +454,12 @@ class CapturePanel(QWidget):
         summary = f"{visible}/{count} visíveis" if count else "Nenhum recorte criado"
         if self._pending_mirrors:
             summary += f" · {len(self._pending_mirrors)} aguardando janela"
+        recovering = sum(entry.recovering for entry in self._entries.values())
+        if recovering:
+            summary += f" · {recovering} aguardando recuperação"
         self.count_label.setText(summary)
         self._update_controls()
+        self._update_recovery_timer()
 
     def _card_opacity(self, key: int, percent: int, label: QLabel) -> None:
         self._select_entry(key)
@@ -393,7 +468,8 @@ class CapturePanel(QWidget):
 
     def _update_controls(self) -> None:
         self.add_button.setEnabled(self.window_combo.currentData() is not None)
-        self.bind_button.setEnabled(bool(self._pending_mirrors)
+        self.bind_button.setEnabled((bool(self._pending_mirrors) or any(
+            item.recovering for item in self._entries.values()))
                                     and self.window_combo.currentData() is not None)
         entry = self._current_entry()
         enabled = entry is not None
@@ -413,13 +489,14 @@ class CapturePanel(QWidget):
         self.selected_coordinates.setText(
             f"Área: x={entry.region.x}, y={entry.region.y}  ·  "
             f"{entry.region.width} × {entry.region.height} px")
-        state = "VISÍVEL" if entry.visible else "OCULTO"
+        state = "AGUARDANDO ORIGEM" if entry.recovering else ("VISÍVEL" if entry.visible else "OCULTO")
         state += " · CLIQUES BLOQUEADOS" if entry.locked else " · EDITÁVEL"
         self.state_label.setText(state)
         bg, fg = ("#1d4738", "#a8ebc2") if entry.visible else ("#39404a", "#d0d8e0")
         self.state_label.setStyleSheet(
             f"color: {fg}; background: {bg}; padding: 5px 9px; border-radius: 7px;")
-        self.show_button.setText("Ocultar espelho" if entry.visible else "Mostrar espelho")
+        self.show_button.setText("Cancelar recuperação" if entry.recovering else
+                                 ("Ocultar espelho" if entry.visible else "Mostrar espelho"))
         self.show_button.setIcon(icon("eye-off" if entry.visible else "eye", size=16))
         self.lock_button.setText("Desbloquear cliques" if entry.locked else "Bloquear cliques")
         self.lock_button.setIcon(icon("lock-keyhole-open" if entry.locked else "lock-keyhole", size=16))
@@ -465,10 +542,18 @@ class CapturePanel(QWidget):
             return None
         return field.text().strip()
 
-    def _show_entry(self, entry: MirrorEntry) -> None:
-        entry.window.show()
-        entry.visible = True
-        self.status_label.setText(f"{entry.region.name} está visível.")
+    def _show_entry(self, entry: MirrorEntry, *, refresh: bool = True) -> None:
+        if refresh:
+            self.refresh_windows()
+        if entry.visible:
+            return
+        entry.recovering = True
+        if self._try_resume_entry(entry):
+            self.status_label.setText(f"{entry.region.name} está visível.")
+        else:
+            self.status_label.setText(
+                f"{entry.region.name}: aguardando uma janela disponível. "
+                "Se houver mais de uma possível, selecione a origem e clique em Vincular.")
         self._refresh_cards(entry.key)
         self._changed()
 
@@ -476,7 +561,12 @@ class CapturePanel(QWidget):
         entry = self._current_entry()
         if entry is None:
             return
-        if entry.visible:
+        if entry.recovering:
+            entry.recovering = False
+            self.status_label.setText(f"{entry.region.name}: recuperação cancelada; espelho oculto.")
+            self._refresh_cards(entry.key)
+            self._changed()
+        elif entry.visible:
             entry.window.close()
         else:
             self._show_entry(entry)
@@ -532,9 +622,11 @@ class CapturePanel(QWidget):
         entry = self._entries.get(key)
         if entry is None or self._shutting_down:
             return
+        entry.recovering = bool(entry.window.source_interrupted) and (entry.visible or entry.recovering)
         entry.visible = False
         self._refresh_cards(key)
-        self.status_label.setText(f"{entry.region.name}: {message}")
+        self.status_label.setText(f"{entry.region.name}: {message}" +
+                                  (". Aguardando recuperação; use Vincular se necessário." if entry.recovering else ""))
         self._changed()
 
     def export_state(self) -> list[dict]:
@@ -549,7 +641,7 @@ class CapturePanel(QWidget):
                 "region": [entry.region.x, entry.region.y,
                            entry.region.width, entry.region.height],
                 "geometry": [geometry.x(), geometry.y(), geometry.width(), geometry.height()],
-                "visible": entry.visible,
+                "visible": entry.visible or entry.recovering,
                 "locked": entry.locked,
                 "fit_mode": entry.fit_mode,
                 "transparency_percent": entry.transparency_percent,
@@ -612,22 +704,21 @@ class CapturePanel(QWidget):
         )
 
     def _restore_record(self, record: dict, match_override: int | None = None) -> bool:
-        indexes = list(range(self.window_combo.count()))
-        exact = [index for index in indexes
-                 if self.window_combo.itemText(index) == record["source_title"]]
-        match = match_override if match_override is not None else (exact[0] if len(exact) == 1 else None)
         executable = record.get("source_executable", "")
         window_class = record.get("source_class", "")
-        if match is None and executable:
-            candidates = [index for index in indexes
-                          if self.window_combo.itemData(index, Qt.ItemDataRole.UserRole + 1) == executable
-                          and (not window_class or self.window_combo.itemData(
-                              index, Qt.ItemDataRole.UserRole + 2) == window_class)]
-            if len(candidates) == 1:
-                match = candidates[0]
+        match = match_override if match_override is not None else self._source_match(
+            record["source_title"], executable, window_class)
         if match is None:
             return False
         hwnd = self.window_combo.itemData(match)
+        if record["visible"]:
+            try:
+                area = get_client_area(hwnd)
+                x, y, width, height = record["region"]
+                if x + width > area.width or y + height > area.height:
+                    return False
+            except RuntimeError:
+                return False
         current_title = self.window_combo.itemText(match)
         region = Region(record["name"], *record["region"])
         key = self._next_key
@@ -655,7 +746,7 @@ class CapturePanel(QWidget):
                                 match, Qt.ItemDataRole.UserRole + 2) or "")
         self._entries[key] = entry
         if record["visible"]:
-            self._show_entry(entry)
+            self._show_entry(entry, refresh=False)
         return True
 
     def _restore_pending(self) -> None:
@@ -670,8 +761,10 @@ class CapturePanel(QWidget):
 
     def _bind_pending(self) -> None:
         index = self.window_combo.currentIndex()
-        if index < 0 or not self._pending_mirrors:
+        waiting = [entry for entry in self._entries.values() if entry.recovering]
+        if index < 0 or not (self._pending_mirrors or waiting):
             return
+        selected_hwnd = self.window_combo.itemData(index)
         dialog = StyledDialog(self, "Vincular recorte")
         dialog.setMinimumWidth(380)
         hint = QLabel("Escolha o recorte salvo para esta janela:")
@@ -679,6 +772,10 @@ class CapturePanel(QWidget):
         choice = QComboBox()
         for record in self._pending_mirrors:
             choice.addItem(f"{record['name']} · {record['source_title']}")
+        for entry in waiting:
+            choice.addItem(f"{entry.region.name} · {entry.source_title}")
+        pending_records = list(self._pending_mirrors)
+        pending_count = len(pending_records)
         dialog.content_layout.addWidget(choice)
         actions = QHBoxLayout()
         actions.addStretch()
@@ -692,7 +789,28 @@ class CapturePanel(QWidget):
         dialog.content_layout.addLayout(actions)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        record = self._pending_mirrors.pop(choice.currentIndex()).copy()
+        index = self.window_combo.findData(selected_hwnd)
+        if index < 0:
+            self.status_label.setText("A janela escolhida não está mais disponível. Selecione outra origem.")
+            return
+        if choice.currentIndex() >= pending_count:
+            entry = waiting[choice.currentIndex() - pending_count]
+            if entry.key not in self._entries or not entry.recovering:
+                return
+            entry.source_hwnd = selected_hwnd
+            entry.source_title = self.window_combo.itemText(index)
+            entry.source_executable = self.window_combo.itemData(index, Qt.ItemDataRole.UserRole + 1) or ""
+            entry.source_class = self.window_combo.itemData(index, Qt.ItemDataRole.UserRole + 2) or ""
+            self._try_resume_entry(entry, match_override=index)
+            self._refresh_cards(entry.key)
+            self._changed()
+            return
+        original = pending_records[choice.currentIndex()]
+        pending_index = next((i for i, item in enumerate(self._pending_mirrors)
+                              if item is original), None)
+        if pending_index is None:
+            return
+        record = self._pending_mirrors.pop(pending_index).copy()
         record["source_title"] = self.window_combo.itemText(index)
         record["source_executable"] = self.window_combo.itemData(
             index, Qt.ItemDataRole.UserRole + 1) or ""
@@ -705,6 +823,7 @@ class CapturePanel(QWidget):
 
     def shutdown(self) -> bool:
         self._shutting_down = True
+        self._recovery_timer.stop()
         for entry in self._entries.values():
             entry.window.close()
         self._entries.clear()

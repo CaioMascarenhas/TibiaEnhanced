@@ -374,6 +374,7 @@ class DwmMirrorWindow(QWidget):
         self._resize_edges = Qt.Edges()
         self._mirror: DwmMirror | None = None
         self._stop_reason = "Espelho fechado"
+        self._source_interrupted = False
         self._started = time.perf_counter()
         self.setWindowTitle(f"Tibia Enhanced — {region.name}")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
@@ -394,6 +395,17 @@ class DwmMirrorWindow(QWidget):
     @property
     def active(self) -> bool:
         return self._mirror is not None
+
+    @property
+    def source_interrupted(self) -> bool:
+        return self._source_interrupted
+
+    def rebind_source(self, hwnd: int) -> None:
+        """Troca a origem de um espelho parado, preservando sua janela e aparência."""
+        if self._mirror is not None:
+            raise RuntimeError("O espelho precisa estar parado para trocar a origem")
+        self._hwnd = hwnd
+        self._source_interrupted = False
 
     @property
     def locked(self) -> bool:
@@ -455,6 +467,7 @@ class DwmMirrorWindow(QWidget):
     def showEvent(self, event) -> None:
         super().showEvent(event)
         self._stop_reason = "Espelho fechado"
+        self._source_interrupted = False
         self._started = time.perf_counter()
         QTimer.singleShot(0, self._start)
 
@@ -462,12 +475,15 @@ class DwmMirrorWindow(QWidget):
         if self._mirror is not None:
             return
         try:
+            get_client_area(self._hwnd)
             self._apply_lock_style()
             self._mirror = DwmMirror(self._hwnd, int(self.winId()))
             self._refresh()
-            self._timer.start()
+            if self._mirror is not None:
+                self._timer.start()
         except RuntimeError as exc:
             self._stop_reason = str(exc)
+            self._source_interrupted = True
             self.close()
 
     def _refresh(self) -> None:
@@ -481,6 +497,7 @@ class DwmMirrorWindow(QWidget):
             self._mirror.update(self._region, box)
         except RuntimeError as exc:
             self._stop_reason = str(exc)
+            self._source_interrupted = True
             self.close()
 
     def resizeEvent(self, event) -> None:

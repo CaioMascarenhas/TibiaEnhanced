@@ -33,7 +33,8 @@ class AppShellTests(unittest.TestCase):
         self.assertTrue(window.isVisible())
         tabs = window.centralWidget()
         self.assertIsInstance(tabs, QTabWidget)
-        self.assertEqual([tabs.tabText(i) for i in range(tabs.count())], ["Recortes", "Alertas"])
+        self.assertEqual([tabs.tabText(i) for i in range(tabs.count())],
+                         ["Recortes", "Alertas", "Donate"])
         window.exit_app()
 
     def test_capture_worker_keeps_event_loop_responsive(self) -> None:

@@ -24,9 +24,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .design import heading_font, icon
+from .design import heading_font, icon, medieval_cursor
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
+from .donate_panel import DonatePanel
 from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
@@ -235,6 +236,8 @@ class MainWindow(QMainWindow):
             icon("bell-ring", "#d5e6f5", 16),
             "Alertas",
         )
+        self.donate_panel = DonatePanel()
+        tabs.addTab(self.donate_panel, icon("heart", "#d5e6f5", 16), "Donate")
         self.setCentralWidget(tabs)
         self.capture_panel.changed.connect(self._schedule_save)
         self.audio_panel.changed.connect(self._schedule_save)
@@ -451,14 +454,14 @@ class MainWindow(QMainWindow):
         elif edges & (Qt.Edge.TopEdge | Qt.Edge.BottomEdge):
             self.setCursor(Qt.CursorShape.SizeVerCursor)
         else:
-            self.unsetCursor()
+            self.setCursor(medieval_cursor(ratio=self.devicePixelRatioF()))
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         self._update_resize_cursor(event.position().toPoint())
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event) -> None:
-        self.unsetCursor()
+        self.setCursor(medieval_cursor(ratio=self.devicePixelRatioF()))
         super().leaveEvent(event)
 
     def toggle_maximized(self) -> None:
@@ -466,7 +469,7 @@ class MainWindow(QMainWindow):
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.WindowStateChange:
-            self.unsetCursor()
+            self.setCursor(medieval_cursor(ratio=self.devicePixelRatioF()))
             inset = 0 if self.isMaximized() else 7
             self.setContentsMargins(inset, inset, inset, inset)
             if hasattr(self, "_title_bar"):

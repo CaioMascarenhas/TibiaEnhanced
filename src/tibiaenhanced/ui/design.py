@@ -5,7 +5,7 @@ from pathlib import Path
 from weakref import WeakKeyDictionary
 
 from PySide6.QtCore import QByteArray, QEasingCurve, QEvent, QObject, QPointF, QRectF, QSize, Qt, QVariantAnimation
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QCursor, QFont, QFontDatabase, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QCheckBox, QFrame, QGraphicsDropShadowEffect,
                                QPushButton, QSlider, QStyle, QStyleOptionSlider)
@@ -55,15 +55,32 @@ def icon(name: str, color: str = "#B8C9DE", size: int = 20) -> QIcon:
     return QIcon(pixmap)
 
 
+@lru_cache(maxsize=16)
+def medieval_cursor(action: bool = False, ratio: float = 1.0) -> QCursor:
+    """Ponta de aço e guarda dourada; o hotspot coincide com a ponta da lâmina."""
+    renderer = QSvgRenderer(str(ASSETS / "icons" /
+                                ("cursor-action.svg" if action else "cursor-arrow.svg")))
+    pixmap = QPixmap(round(32 * ratio), round(32 * ratio))
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    pixmap.setDevicePixelRatio(ratio)
+    return QCursor(pixmap, 3, 2)
+
+
 class InteractionCursors(QObject):
     """Inclui controles criados posteriormente, como os botões dos diálogos."""
 
     def eventFilter(self, watched, event) -> bool:
-        from PySide6.QtWidgets import QAbstractButton, QComboBox, QSlider, QTabBar
-        if event.type() in (QEvent.Type.Polish, QEvent.Type.EnabledChange):
+        from PySide6.QtWidgets import QAbstractButton, QComboBox, QSlider, QTabBar, QWidget
+        if event.type() in (QEvent.Type.Polish, QEvent.Type.EnabledChange,
+                            QEvent.Type.Enter):
             if isinstance(watched, (QAbstractButton, QComboBox, QSlider, QTabBar)):
-                watched.setCursor(Qt.CursorShape.PointingHandCursor if watched.isEnabled()
-                                  else Qt.CursorShape.ArrowCursor)
+                watched.setCursor(medieval_cursor(watched.isEnabled(), watched.devicePixelRatioF()))
+            elif (isinstance(watched, QWidget) and watched.isWindow()
+                  and not watched.testAttribute(Qt.WidgetAttribute.WA_SetCursor)):
+                watched.setCursor(medieval_cursor(ratio=watched.devicePixelRatioF()))
         return False
 
 

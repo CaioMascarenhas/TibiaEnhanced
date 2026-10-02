@@ -106,10 +106,66 @@ class ProfileTests(unittest.TestCase):
         self.assertTrue(panel.cards[0].timer.loop)
         self.assertEqual(panel.cards[0].timer.volume, 0.35)
         saved["timers"][-1]["sound_file"] = "C:/missing/sound.mp3"
+        saved["timers"][-1].pop("sound_asset", None)
         self.assertTrue(any("Áudio ausente" in warning for warning in panel.load_state(saved)))
         saved["timers"][-1]["name"] = "X" * (NAME_MAX_LENGTH + 10)
         self.assertTrue(panel.load_state(saved))
         self.assertEqual(len(panel.cards[-1].timer.name), NAME_MAX_LENGTH)
+        panel.close()
+
+    def test_bundled_sounds_resolve_after_moving_installation(self) -> None:
+        panel = AudioPanel()
+        panel.cards[0].loop_check.setChecked(True)
+        panel.cards[0].volume.setValue(35)
+        panel.cards[0].timer.duration_seconds = 75
+        saved = panel.export_state()
+        self.assertEqual(saved["timers"][0]["sound_file"], "audios/foodacabou.mp3")
+        self.assertEqual(saved["timers"][0]["sound_asset"], "foodacabou.mp3")
+        with tempfile.TemporaryDirectory() as folder:
+            moved_sounds = {}
+            for _, _, original, _ in DEFAULT_TIMERS:
+                destination = Path(folder) / original.name
+                destination.write_bytes(original.read_bytes())
+                moved_sounds[original.name] = destination
+            with patch("tibiaenhanced.ui.audio_panel.BUNDLED_SOUNDS", moved_sounds):
+                self.assertEqual(panel.load_state(saved), [])
+                self.assertEqual(panel.cards[0].timer.sound_file, moved_sounds["foodacabou.mp3"])
+                self.assertTrue(panel.cards[0].timer.loop)
+                self.assertEqual(panel.cards[0].timer.volume, 0.35)
+                self.assertEqual(panel.cards[0].timer.duration_seconds, 75)
+                self.assertFalse(panel.cards[0].timer.running)
+                self.assertEqual(panel.export_state()["timers"][0]["sound_file"],
+                                 "audios/foodacabou.mp3")
+        panel.close()
+
+    def test_legacy_packaged_sounds_migrate_without_replacing_custom_audio(self) -> None:
+        panel = AudioPanel()
+        panel.add_timer(AudioTimer("Custom", 60, DEFAULT_TIMERS[0][2]))
+        saved = panel.export_state()
+        for record in saved["timers"]:
+            record.pop("sound_asset", None)
+            record["sound_file"] = "C:/old-install/tibiaenhanced/" + record["sound_file"]
+        self.assertEqual(panel.load_state(saved), [])
+        self.assertEqual(panel.cards[-1].timer.sound_file, DEFAULT_TIMERS[0][2])
+        with tempfile.TemporaryDirectory() as folder:
+            custom = Path(folder).resolve() / "foodacabou.mp3"
+            custom.write_bytes(DEFAULT_TIMERS[0][2].read_bytes())
+            saved["timers"][0]["sound_file"] = str(custom)
+            self.assertEqual(panel.load_state(saved), [])
+            self.assertEqual(panel.cards[0].timer.sound_file, custom)
+            exported = panel.export_state()
+            self.assertNotIn("sound_asset", exported["timers"][0])
+            custom.unlink()
+            self.assertTrue(any("Áudio ausente" in warning for warning in panel.load_state(exported)))
+            self.assertEqual(panel.cards[0].timer.sound_file, custom)
+        panel.close()
+
+    def test_unknown_bundled_sound_identifier_is_rejected(self) -> None:
+        panel = AudioPanel()
+        saved = panel.export_state()
+        saved["timers"][0]["sound_asset"] = "../other.mp3"
+        self.assertTrue(panel.load_state(saved))
+        self.assertEqual(panel.cards[0].timer.sound_file, DEFAULT_TIMERS[0][2])
         panel.close()
 
     def test_recorte_follows_tibia_process_when_character_changes(self) -> None:
