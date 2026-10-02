@@ -1,25 +1,25 @@
 # Preparação da distribuição — issue #6
 
-Avaliação em 02/10/2026. A issue continua aberta; ainda não há pacote Windows instalável validado.
+Avaliação em 02/10/2026. A issue continua aberta. O executável e o ZIP portátil foram gerados e passaram nos diagnósticos locais; instalação/desinstalação e a matriz com o cliente real ainda estão pendentes. Consulte [build e resultados](windows-build.md).
 
 ## Situação verificada
 
 | Critério da issue | Resultado |
 | --- | --- |
 | Testes manuais de captura, áudio, suspensão, DPI e monitores | Parcial. Há relatos em `capture-spike.md` e `mirrors.md`, mas falta a matriz final com o executável distribuído. DPI físico acima de 100% e modos de vídeo permanecem pendentes no comentário da issue. |
-| Aviso e recuperação quando a origem desaparece | Implementado e validado com testes automatizados: janela reaberta, minimização, região que não cabe, origem ambígua, vinculação manual e cancelamento. Ainda requer validação com o cliente real e com o pacote distribuído. |
-| Instalação, execução e desinstalação | Pendente. O README descreve a execução a partir do código e da virtualenv, sem instalador ou guia de desinstalação. |
-| Pacote sem segredos e sem envio de dados do jogo | A inspeção de `src/` não encontrou cliente de rede ou upload. Os links externos são abertos pelo usuário. O pacote final ainda precisa ser inspecionado; isso não equivale a uma auditoria de dependências ou de tráfego. |
+| Aviso e recuperação quando a origem desaparece | Implementado e validado em testes automatizados e no executável com uma janela sintética em outro processo: minimizar/restaurar, fechar/reabrir, manter preferências e respeitar ocultação voluntária. Ainda requer validação com o cliente real. |
+| Instalação, execução e desinstalação | Execução do ZIP validada em Windows 10 x64, incluindo outro caminho com espaço/acento e diretório de trabalho fora do projeto. Definição Inno Setup preparada com ícones; compilação, instalação e desinstalação pendentes porque o compilador não está instalado. |
+| Pacote sem segredos e sem envio de dados do jogo | A inspeção de `src/` não encontrou cliente de rede ou upload. Os links externos são abertos pelo usuário. O build verifica a ausência de Git, virtualenv, configurações pessoais, perfis e `.env`; os 37 assets do pacote foram comparados com os originais. Isso não equivale a uma auditoria de dependências ou de tráfego. |
 | Revisão das regras atuais da CipSoft | Pendente. O site oficial retornou HTTP 403 nesta consulta. Não foi possível concluir a leitura integral atual nem estabelecer autorização para o espelhamento DWM. |
 
-Os 63 testes automatizados passaram na árvore de trabalho após os ajustes de sons e recuperação. O commit isolado anterior do fix do cursor na `main` passou em 52 testes. Há alterações locais sem commit, incluindo Donate, cursor medieval e os ajustes de preparação para distribuição; a versão de lançamento precisa partir de um commit que contenha tudo que será distribuído.
+Os 63 testes automatizados passaram no código final. Donate, cursor medieval e ajustes de portabilidade/recuperação estão no commit `a2259ab`; empacotamento e diagnósticos estão no commit `5f5d38f`. O pacote foi gerado a partir desse último commit com a árvore de código limpa. Os diagnósticos headless e nativo do executável retornaram `frozen: true` e `status: passed`.
 
 ## Problemas concretos antes do empacotamento
 
 1. **Sons padrão: corrigido em código e testes.** A exportação usa `sound_asset` para os sons internos, com resolução na instalação atual. A leitura migra caminhos antigos reconhecidos como pertencentes à pasta `tibiaenhanced/audios`. Áudios personalizados mantêm seus caminhos, inclusive quando têm o mesmo nome de um som interno. Foram verificados mudança de instalação, migração de perfil e identificadores inválidos.
 2. **Recuperação dos espelhos: corrigida em código e testes.** Interrupções de origem são distinguidas de ocultação voluntária. A verificação ocorre a cada segundo somente enquanto há recortes aguardando. A recuperação preserva janela, região, geometria e aparência, atualiza o HWND e requer vinculação manual quando a identidade é ambígua. A intenção de visibilidade é preservada no perfil durante a espera. O usuário pode cancelar a recuperação; shutdown encerra a verificação.
-3. **Build ainda não está definido.** Não há script/spec de PyInstaller, instalador, workflow de release ou versões exatas das dependências de build. `.gitignore` ignora `*.spec`; caso usemos esse formato, o spec do projeto precisa de uma exceção para ser versionado.
-4. **Licenças precisam acompanhar o produto.** Há licenças das fontes e dos ícones, mas não há licença do projeto na raiz. Escolher a licença do app, reunir avisos das bibliotecas efetivamente incluídas e conferir a procedência/permissão de imagens e áudios. Ser gratuito não elimina obrigações de redistribuição do Qt/PySide6.
+3. **Build implementado e testado localmente.** Há script/spec de PyInstaller versionados, dependências de build fixadas, ZIP portátil, manifesto com hash/commit e ícone do app incorporado no PE em sete tamanhos. A definição do instalador usa o mesmo ícone para setup, atalhos e desinstalação. Workflow de release e compilação do instalador permanecem pendentes.
+4. **Revisão de licenças pendente.** O pacote inclui as licenças dos assets e os avisos encontrados nas distribuições Python/PySide6/shiboken6/mss. Não há licença do projeto na raiz. Escolher a licença do app, conferir a completude dos avisos e a procedência/permissão de imagens e áudios. Ser gratuito não elimina obrigações de redistribuição do Qt/PySide6.
 
 ## Caminho proposto
 
@@ -33,10 +33,10 @@ Um certificado de assinatura pode ser avaliado para a distribuição pública; n
 
 ## Matriz de validação do pacote
 
-Registrar versão do Windows, versão do app, monitores/escalas, cenário, resultado e evidência. Os itens abaixo são pendentes até execução e registro no pacote final.
+Registrar versão do Windows, versão do app, monitores/escalas, cenário, resultado e evidência. Os resultados locais do pacote estão em [windows-build.md](windows-build.md); as partes físicas e de instalação abaixo continuam pendentes.
 
 - Windows 11 x64 sem Python instalado; incluir Windows 10 x64 na matriz apenas se for declarado como suportado.
-- Abrir sem console; conferir todas as abas, fontes, ícones, cursores, imagens e QR Pix.
+- Abrir sem console; conferir todas as abas, fontes, ícones, cursores, imagens e QR Pix. Validado no pacote local; repetir na máquina limpa.
 - MP3 padrão e WAV/MP3 personalizado, teste de som, volume, loop e atalhos com o app em foco.
 - Suspender/retomar com timer vencido; alertar uma vez, conforme o comportamento documentado.
 - Tibia em janela, sem bordas e tela cheia disponível; minimizar, restaurar, fechar e reabrir.
@@ -44,9 +44,9 @@ Registrar versão do Windows, versão do app, monitores/escalas, cenário, resul
 - DPI físico 100%, 125%, 150% e 200%; mover app e espelhos entre monitores com escalas diferentes e coordenadas negativas.
 - Mostrar/ocultar, bloquear/desbloquear, opacidade, ajuste de imagem, movimento e redimensionamento dos espelhos.
 - Medir CPU/GPU e observar fluidez com 1, 5 e 10 recortes, registrando o hardware. Não apresentar FPS de miniatura como medida da API DWM.
-- Reiniciar app, alternar perfis, mover o pacote portátil e atualizar a instalação; manter configurações e sons padrão funcionando.
+- Reiniciar app, alternar perfis, mover o pacote portátil e atualizar a instalação; manter configurações e sons padrão funcionando. Roundtrip de perfil temporário, sons padrão e mudança de caminho validados; atualização instalada pendente.
 - Instalar como usuário comum, usar caminho com espaços/acentos e desinstalar; verificar o tratamento dos perfis.
-- Inspecionar o conteúdo distribuído: excluir `.git`, virtualenv de desenvolvimento, configurações pessoais, credenciais, logs e ferramentas de diagnóstico. Validar que o funcionamento normal não depende de conexão externa.
+- Inspecionar o conteúdo distribuído: excluir `.git`, virtualenv de desenvolvimento, configurações pessoais, credenciais, logs e scripts de desenvolvimento. A checagem de conteúdo foi feita no build local; validar funcionamento normal sem conexão externa. O executável oferece diagnóstico opcional com perfil temporário, ativado somente por argumentos específicos.
 
 ## Fontes
 
