@@ -65,6 +65,8 @@ Nomes de perfis, alertas e recortes têm limite de **24 caracteres**. Nomes maio
 
 Novos recortes usam **Preencher janela** como ajuste padrão. No menu de botão direito do espelho, o slider **Opacidade** ajusta a transparência e **Ajuste da imagem** alterna entre **Preencher janela** e **Preservar proporção**. Essas preferências ficam salvas no perfil.
 
+O processo de geração do executável e os diagnósticos do pacote Windows estão em [docs/windows-build.md](docs/windows-build.md).
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)

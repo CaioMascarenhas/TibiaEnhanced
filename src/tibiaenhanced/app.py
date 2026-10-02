@@ -13,9 +13,9 @@ from .services.windowing import enable_per_monitor_dpi_awareness
 from .services.profiles import ProfileStore
 
 
-def main() -> int:
+def create_application(argv: list[str]) -> QApplication:
     enable_per_monitor_dpi_awareness()
-    app = QApplication(sys.argv)
+    app = QApplication(argv)
     app.setApplicationName("Tibia Enhanced")
     app.setOrganizationName("Tibia Enhanced")
     app.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "imgs" / "iconapp_no_bg.png")))
@@ -29,7 +29,12 @@ def main() -> int:
     hover_effects = HoverEffects(app)
     app.installEventFilter(hover_effects)
     app.setStyleSheet(app_stylesheet(heading_family, body_family))
+    app._ui_filters = (cursors, hover_effects)
+    return app
 
+
+def main() -> int:
+    app = create_application(sys.argv)
     profiles = ProfileStore()
     warnings = profiles.load()
     window = MainWindow(profiles, warnings)

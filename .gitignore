@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-build/
 venv/
 .pytest_cache/
 .mypy_cache/
@@ -9,6 +10,7 @@ venv/
 dist/
 build/
 *.spec
+!packaging/TibiaEnhanced.spec
 *.log
 .env
 .env.*
