@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QPoint, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QSystemTrayIcon,
     QTabWidget,
     QVBoxLayout,
+    QWidget,
 )
 
 from .design import heading_font, icon
@@ -31,6 +32,23 @@ from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
 from ..models import NAME_MAX_LENGTH
 from .window_selector import WindowSelector
+
+
+class _ResizeCursorTracker(QObject):
+    """Atualiza o cursor da janela mesmo quando um filho recebe o mouse."""
+
+    def __init__(self, window) -> None:
+        super().__init__(window)
+        self._window = window
+
+    def eventFilter(self, watched, event) -> bool:
+        if (event.type() in (QEvent.Type.Enter, QEvent.Type.MouseMove)
+                and isinstance(event, (QEnterEvent, QMouseEvent))
+                and isinstance(watched, QWidget)
+                and QWidget.window(watched) is self._window):
+            point = self._window.mapFromGlobal(event.globalPosition().toPoint())
+            self._window._update_resize_cursor(point)
+        return False
 
 
 class TitleBar(QFrame):
@@ -241,6 +259,8 @@ class MainWindow(QMainWindow):
 
         if QSystemTrayIcon.isSystemTrayAvailable():
             self._setup_tray()
+        self._cursor_tracker = _ResizeCursorTracker(self)
+        QApplication.instance().installEventFilter(self._cursor_tracker)
 
     def _refresh_profile_combo(self) -> None:
         combo = self._title_bar.profile_combo
@@ -420,8 +440,8 @@ class MainWindow(QMainWindow):
                 return
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        edges = self._resize_edges(event.position().toPoint())
+    def _update_resize_cursor(self, point: QPoint) -> None:
+        edges = self._resize_edges(point)
         if edges in (Qt.Edge.LeftEdge | Qt.Edge.TopEdge, Qt.Edge.RightEdge | Qt.Edge.BottomEdge):
             self.setCursor(Qt.CursorShape.SizeFDiagCursor)
         elif edges in (Qt.Edge.RightEdge | Qt.Edge.TopEdge, Qt.Edge.LeftEdge | Qt.Edge.BottomEdge):
@@ -432,13 +452,21 @@ class MainWindow(QMainWindow):
             self.setCursor(Qt.CursorShape.SizeVerCursor)
         else:
             self.unsetCursor()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        self._update_resize_cursor(event.position().toPoint())
         super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self.unsetCursor()
+        super().leaveEvent(event)
 
     def toggle_maximized(self) -> None:
         self.showNormal() if self.isMaximized() else self.showMaximized()
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.WindowStateChange:
+            self.unsetCursor()
             inset = 0 if self.isMaximized() else 7
             self.setContentsMargins(inset, inset, inset, inset)
             if hasattr(self, "_title_bar"):

@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QEvent, QPoint, Qt  # noqa: E402
-from PySide6.QtGui import QFontDatabase  # noqa: E402
-from PySide6.QtWidgets import QApplication, QFrame, QPushButton  # noqa: E402
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt  # noqa: E402
+from PySide6.QtGui import QEnterEvent, QFontDatabase, QMouseEvent  # noqa: E402
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton  # noqa: E402
 from tibiaenhanced.ui.dialog_shell import StyledDialog  # noqa: E402
 from tibiaenhanced.ui.audio_panel import TimerDialog, AudioPanel  # noqa: E402
 from tibiaenhanced.ui.capture_panel import CapturePanel  # noqa: E402
@@ -66,6 +66,54 @@ class ModernUiTests(unittest.TestCase):
         button.setEnabled(True)
         self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
         self.app.removeEventFilter(cursors)
+
+    def test_resize_cursor_resets_when_entering_child_content(self) -> None:
+        window = MainWindow()
+        label = QLabel("Conteúdo", window.centralWidget())
+        label.setGeometry(80, 80, 150, 30)
+        button = QPushButton("Ação", window.centralWidget())
+        button.setGeometry(80, 120, 150, 30)
+        window.show()
+        self.app.processEvents()
+        inside = label.rect().center()
+        global_inside = label.mapToGlobal(inside)
+        edges = (
+            (QPoint(1, 200), Qt.CursorShape.SizeHorCursor),
+            (QPoint(window.width() - 2, 200), Qt.CursorShape.SizeHorCursor),
+            (QPoint(200, 1), Qt.CursorShape.SizeVerCursor),
+            (QPoint(200, window.height() - 2), Qt.CursorShape.SizeVerCursor),
+            (QPoint(1, 1), Qt.CursorShape.SizeFDiagCursor),
+            (QPoint(window.width() - 2, window.height() - 2), Qt.CursorShape.SizeFDiagCursor),
+            (QPoint(window.width() - 2, 1), Qt.CursorShape.SizeBDiagCursor),
+            (QPoint(1, window.height() - 2), Qt.CursorShape.SizeBDiagCursor),
+        )
+        for edge, shape in edges:
+            with self.subTest(edge=edge):
+                self.app.sendEvent(window, QMouseEvent(
+                    QEvent.Type.MouseMove, QPointF(edge),
+                    QPointF(window.mapToGlobal(edge)), Qt.MouseButton.NoButton,
+                    Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier))
+                self.assertEqual(window.cursor().shape(), shape)
+                self.app.sendEvent(label, QEnterEvent(
+                    QPointF(inside), QPointF(window.mapFromGlobal(global_inside)),
+                    QPointF(global_inside)))
+                self.assertEqual(label.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        window._update_resize_cursor(QPoint(1, 200))
+        local = button.rect().center()
+        global_point = button.mapToGlobal(local)
+        self.app.sendEvent(button, QEnterEvent(
+            QPointF(local), QPointF(window.mapFromGlobal(global_point)), QPointF(global_point)))
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        self.assertEqual(button.cursor().shape(), Qt.CursorShape.PointingHandCursor)
+        window._update_resize_cursor(QPoint(200, 1))
+        self.app.sendEvent(window, QEvent(QEvent.Type.Leave))
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        window._update_resize_cursor(QPoint(1, 200))
+        window.showMaximized()
+        self.app.processEvents()
+        self.assertEqual(window.cursor().shape(), Qt.CursorShape.ArrowCursor)
+        window.exit_app()
 
     def test_settings_dialogs_share_rounded_chrome_and_palette(self) -> None:
         panel = AudioPanel()
