@@ -38,8 +38,8 @@ class ModernUiTests(unittest.TestCase):
 
     def test_main_window_has_compact_rounded_chrome(self) -> None:
         window = MainWindow()
-        self.assertEqual((window.width(), window.height()), (800, 560))
-        self.assertEqual((window.minimumWidth(), window.minimumHeight()), (680, 460))
+        self.assertEqual((window.width(), window.height()), (940, 600))
+        self.assertEqual((window.minimumWidth(), window.minimumHeight()), (800, 500))
         self.assertIn("https://github.com/CaioMascarenhas", window.author_link.text())
         self.assertTrue(window.author_link.openExternalLinks())
         self.assertTrue(window.windowFlags() & Qt.WindowType.FramelessWindowHint)

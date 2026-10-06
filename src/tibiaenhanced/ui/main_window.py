@@ -8,6 +8,7 @@ from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSystemTrayIcon,
-    QTabWidget,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -28,7 +29,7 @@ from .design import heading_font, icon, medieval_cursor
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .donate_panel import DonatePanel
-from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
+from .palette import ACCENT_LIGHT, BACKGROUND, BORDER, MUTED
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
 from ..models import NAME_MAX_LENGTH
@@ -58,17 +59,17 @@ class TitleBar(QFrame):
         self.window = window
         self._drag_origin: QPoint | None = None
         self.setObjectName("titleBar")
-        self.setFixedHeight(52)
+        self.setFixedHeight(60)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(15, 5, 11, 5)
+        layout.setContentsMargins(17, 7, 12, 7)
         layout.setSpacing(0)
 
         emblem = QLabel()
         emblem.setObjectName("brandIcon")
-        emblem.setFixedSize(30, 30)
+        emblem.setFixedSize(34, 34)
         emblem.setAlignment(Qt.AlignmentFlag.AlignCenter)
         emblem.setPixmap(QPixmap(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png"))
-                         .scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
+                         .scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
                                  Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(emblem)
         layout.addSpacing(9)
@@ -76,25 +77,25 @@ class TitleBar(QFrame):
         brand.setSpacing(0)
         title = QLabel("Tibia Enhanced")
         title.setObjectName("brandTitle")
-        title.setFont(heading_font(16))
+        title.setFont(heading_font(12))
         brand.addWidget(title)
         layout.addLayout(brand)
         layout.addStretch()
 
         self.profile_controls = QFrame()
         self.profile_controls.setObjectName("profileControls")
-        self.profile_controls.setFixedHeight(38)
+        self.profile_controls.setFixedHeight(36)
         self._profile_scale = -1.0
         profile_row = QHBoxLayout(self.profile_controls)
         profile_row.setContentsMargins(7, 2, 4, 2)
         profile_row.setSpacing(3)
         profile_label = QLabel("Perfil")
         profile_label.setObjectName("profileLabel")
-        profile_label.setMinimumWidth(40)
+        profile_label.setMinimumWidth(34)
         profile_row.addWidget(profile_label)
         self.profile_combo = WindowSelector()
         self.profile_combo.setObjectName("profileSelector")
-        self.profile_combo.setFixedWidth(150)
+        self.profile_combo.setFixedWidth(145)
         self.profile_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.profile_combo.setToolTip("Perfil local de recortes e alertas")
         self.profile_combo.currentTextChanged.connect(window._switch_profile)
@@ -144,14 +145,12 @@ class TitleBar(QFrame):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        # Give the larger type room, then grow within a bounded range.
-        scale = min(1.0, max(0.0, (self.window.width() - 680) / 720))
+        # Grow the profile name without crowding the brand or window controls.
+        scale = min(1.0, max(0.0, (self.window.width() - 800) / 800))
         if scale == self._profile_scale:
             return
         self._profile_scale = scale
-        self.profile_combo.setFixedWidth(round(150 + 240 * scale))
-        self.profile_controls.setFixedHeight(round(38 + 4 * scale))
-        self.setFixedHeight(round(52 + 4 * scale))
+        self.profile_combo.setFixedWidth(round(145 + 125 * scale))
         for button, name, base_size in self._profile_actions:
             button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
             size = round(base_size + 2 * scale)
@@ -219,26 +218,55 @@ class MainWindow(QMainWindow):
         self.setMouseTracking(True)
         self.setWindowTitle("Tibia Enhanced")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png")))
-        self.resize(800, 560)
-        self.setMinimumSize(680, 460)
+        self.resize(940, 600)
+        self.setMinimumSize(800, 500)
         self._title_bar = TitleBar(self)
         self.setMenuWidget(self._title_bar)
 
-        tabs = QTabWidget()
-        tabs.tabBar().setIconSize(QSize(16, 16))
+        workspace = QWidget()
+        workspace.setObjectName("appWorkspace")
+        workspace_row = QHBoxLayout(workspace)
+        workspace_row.setContentsMargins(0, 0, 0, 0)
+        workspace_row.setSpacing(0)
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(164)
+        navigation = QVBoxLayout(sidebar)
+        navigation.setContentsMargins(10, 21, 10, 18)
+        navigation.setSpacing(6)
+        navigation_label = QLabel("ESPAÇO DE TRABALHO")
+        navigation_label.setObjectName("navigationLabel")
+        navigation.addWidget(navigation_label)
+        navigation.addSpacing(5)
+        self.pages = QStackedWidget()
+        self.pages.setObjectName("pages")
         self.capture_panel = CapturePanel()
-        tabs.addTab(self.capture_panel,
-                    icon("monitor", "#d5e6f5", 16),
-                    "Recortes")
         self.audio_panel = AudioPanel()
-        tabs.addTab(
-            self.audio_panel,
-            icon("bell-ring", "#d5e6f5", 16),
-            "Alertas",
-        )
         self.donate_panel = DonatePanel()
-        tabs.addTab(self.donate_panel, icon("heart", "#d5e6f5", 16), "Donate")
-        self.setCentralWidget(tabs)
+        self.navigation_buttons = []
+        self._navigation_group = QButtonGroup(self)
+        for index, (page, name, symbol) in enumerate((
+            (self.capture_panel, "Recortes", "monitor"),
+            (self.audio_panel, "Alertas", "bell-ring"),
+            (self.donate_panel, "Apoiar", "heart"),
+        )):
+            self.pages.addWidget(page)
+            button = QPushButton(name)
+            button.setObjectName("navigationButton")
+            button.setCheckable(True)
+            button.setIcon(icon(symbol, MUTED, 18))
+            button.setIconSize(QSize(18, 18))
+            button.setAccessibleName(name)
+            button.clicked.connect(lambda checked=False, target=index: self.pages.setCurrentIndex(target))
+            self._navigation_group.addButton(button, index)
+            self.navigation_buttons.append(button)
+            navigation.addWidget(button)
+        navigation.addStretch()
+        workspace_row.addWidget(sidebar)
+        workspace_row.addWidget(self.pages, 1)
+        self.pages.currentChanged.connect(self._update_navigation)
+        self._update_navigation(0)
+        self.setCentralWidget(workspace)
         self.capture_panel.changed.connect(self._schedule_save)
         self.audio_panel.changed.connect(self._schedule_save)
         self._refresh_profile_combo()
@@ -264,6 +292,13 @@ class MainWindow(QMainWindow):
             self._setup_tray()
         self._cursor_tracker = _ResizeCursorTracker(self)
         QApplication.instance().installEventFilter(self._cursor_tracker)
+
+    def _update_navigation(self, index: int) -> None:
+        for position, (button, symbol) in enumerate(zip(
+                self.navigation_buttons, ("monitor", "bell-ring", "heart"))):
+            selected = position == index
+            button.setChecked(selected)
+            button.setIcon(icon(symbol, ACCENT_LIGHT if selected else MUTED, 18))
 
     def _refresh_profile_combo(self) -> None:
         combo = self._title_bar.profile_combo

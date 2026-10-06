@@ -32,11 +32,11 @@ def load_fonts() -> tuple[str, str]:
     return HEADING_FAMILY, BODY_FAMILY
 
 
-def ui_font(size: int = 11, *, heading: bool = False) -> QFont:
+def ui_font(size: int = 10, *, heading: bool = False) -> QFont:
     font = QFont(HEADING_FAMILY if heading else BODY_FAMILY, size)
     font.setWeight(QFont.Weight.DemiBold if heading else QFont.Weight.Normal)
-    font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias |
-                          QFont.StyleStrategy.NoSubpixelAntialias)
+    # Respeita a suavização e o hinting do sistema, inclusive ClearType no Windows.
+    font.setStyleStrategy(QFont.StyleStrategy.PreferDefault)
     return font
 
 
@@ -104,7 +104,7 @@ class HoverEffects(QObject):
                 effect = QGraphicsDropShadowEffect(watched)
                 effect.setBlurRadius(2)
                 effect.setOffset(0, 0)
-                effect.setColor(QColor(53, 191, 169, 0))
+                effect.setColor(QColor(0, 0, 0, 0))
                 watched.setGraphicsEffect(effect)
                 animation = QVariantAnimation(watched)
                 animation.setDuration(170)
@@ -127,7 +127,7 @@ class HoverEffects(QObject):
     def _draw_shadow(effect: QGraphicsDropShadowEffect, progress: float) -> None:
         effect.setBlurRadius(2 + 18 * progress)
         effect.setOffset(0, 2 * progress)
-        effect.setColor(QColor(53, 191, 169, round(72 * progress)))
+        effect.setColor(QColor(0, 0, 0, round(48 * progress)))
 
     def _animate(self, watched, target: float) -> None:
         animation = self._animations[watched]
@@ -310,9 +310,11 @@ class ToggleCheckBox(QCheckBox):
         track = QRectF(3, (self.height() - 20) / 2, 36, 20)
         painter.setPen(Qt.PenStyle.NoPen)
         if self.isEnabled() and (self.underMouse() or self.hasFocus()):
-            painter.setBrush(QColor(53, 191, 169, 45 if self.hasFocus() else 25))
+            halo = QColor(ACCENT)
+            halo.setAlpha(45 if self.hasFocus() else 25)
+            painter.setBrush(halo)
             painter.drawRoundedRect(track.adjusted(-3, -3, 3, 3), 13, 13)
-        painter.setBrush(QColor(TRACK if self.isEnabled() else "#354044"))
+        painter.setBrush(QColor(TRACK if self.isEnabled() else "#343a46"))
         painter.drawRoundedRect(track, 10, 10)
         if self._position:
             active = QColor(ACCENT_HOVER if self.underMouse() else ACCENT)
@@ -323,9 +325,9 @@ class ToggleCheckBox(QCheckBox):
         radius = 6.4 if self._pressed else 7.2
         painter.setBrush(QColor(0, 0, 0, 50))
         painter.drawEllipse(QPointF(cx + 0.5, self.height() / 2 + 1.2), radius, radius)
-        painter.setBrush(QColor(TEXT if self.isEnabled() else "#899a98"))
+        painter.setBrush(QColor(TEXT if self.isEnabled() else "#8791a2"))
         painter.drawEllipse(QPointF(cx, self.height() / 2), radius, radius)
-        painter.setPen(QColor(MUTED if self.isEnabled() else "#899a98"))
+        painter.setPen(QColor(MUTED if self.isEnabled() else "#8791a2"))
         painter.setFont(self.font())
         painter.drawText(QRectF(46, 0, self.width() - 46, self.height()),
                          Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())

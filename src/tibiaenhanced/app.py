@@ -1,6 +1,5 @@
 """Ponto de entrada único do aplicativo."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -16,10 +15,6 @@ from .services.profiles import ProfileStore
 
 def create_application(argv: list[str]) -> QApplication:
     enable_per_monitor_dpi_awareness()
-    if sys.platform == "win32":
-        # The native font engine can ignore NoSubpixelAntialias. FreeType
-        # honors it without changing the user's Windows ClearType settings.
-        os.environ.setdefault("QT_QPA_PLATFORM", "windows:fontengine=freetype")
     app = QApplication(argv)
     app.setApplicationName("Tibia Enhanced")
     app.setOrganizationName("Tibia Enhanced")

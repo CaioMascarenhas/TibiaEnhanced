@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QScrollArea, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget
 
 from .dialog_shell import StyledDialog
 
@@ -77,14 +77,17 @@ class RegionDialog(StyledDialog):
 
         self._coordinates = QLabel("Nenhuma região selecionada")
         layout.addWidget(self._coordinates)
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton("Cancelar")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        self._ok = QPushButton("Criar recorte")
+        self._ok.setObjectName("primaryButton")
         self._ok.setEnabled(False)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        self._ok.clicked.connect(self.accept)
+        buttons.addWidget(self._ok)
+        layout.addLayout(buttons)
         self._canvas.selection_changed.connect(self._on_selection_changed)
 
     @property

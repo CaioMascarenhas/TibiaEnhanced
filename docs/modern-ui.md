@@ -1,4 +1,22 @@
-# Redesign visual da issue #9
+# Design e legibilidade
+
+## Interface atual
+
+A revisão de legibilidade usa superfícies grafite neutras e azul suave nos controles. Segoe UI recebe a renderização padrão do Windows; o aplicativo não força FreeType nem desativa a suavização subpixel. Texto principal de 14 px, apoio de 13 px e títulos de página de 24 px distinguem conteúdo e ações sem aplicar negrito a todos os textos.
+
+A janela inicial de 940 × 600 tem navegação lateral, perfil agrupado no cabeçalho, toolbars para origem e volume e estados vazios com uma única orientação. Cards adaptam as colunas à largura disponível, respeitam a altura do conteúdo e abreviam nomes longos com tooltip. Os diálogos seguem a mesma paleta, tipografia e espaçamento.
+
+As prévias abaixo foram renderizadas pelo próprio aplicativo no backend nativo do Windows. Os recortes usam dados fictícios, sem iniciar espelhos do jogo.
+
+![Recortes com o design atual](images/ui-readable-recortes.png)
+
+![Alertas com o design atual](images/ui-readable-alertas.png)
+
+![Configuração do temporizador](images/ui-readable-dialog.png)
+
+Os testes incluem contraste de texto, navegação, limites de layout, títulos longos, largura fixa dos percentuais e interação dos sliders. A inspeção visual também inclui a escala de 150% do Windows.
+
+## Histórico da issue #9
 
 Interface PySide6 com fundo grafite, cards neutros, destaque em verde água e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo. A versão azul anterior permanece nas capturas para comparação.
 
