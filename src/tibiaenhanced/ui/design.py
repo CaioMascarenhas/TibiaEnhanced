@@ -14,30 +14,34 @@ from .palette import ACCENT, ACCENT_HOVER, MUTED, TEXT, TRACK
 
 
 ASSETS = Path(__file__).resolve().parents[1]
-HEADING_FAMILY = "Space Grotesk"
-BODY_FAMILY = "DM Sans"
+HEADING_FAMILY = "Segoe UI"
+BODY_FAMILY = "Segoe UI"
 
 
 def load_fonts() -> tuple[str, str]:
-    """Registra as fontes distribuídas com o aplicativo."""
+    """Usa a fonte de interface do Windows, com fallback para outros ambientes."""
     global HEADING_FAMILY, BODY_FAMILY
-    for filename, heading in (
-        ("SpaceGrotesk[wght].ttf", True),
-        ("DMSans[opsz,wght].ttf", False),
-    ):
-        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / filename))
-        families = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
-        if heading:
-            HEADING_FAMILY = families[0] if families else "Segoe UI"
-        else:
-            BODY_FAMILY = families[0] if families else "Segoe UI"
+    families = QFontDatabase.families()
+    family = "Segoe UI"
+    if family not in families:
+        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "DMSans[opsz,wght].ttf"))
+        bundled = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
+        family = bundled[0] if bundled else QFontDatabase.systemFont(
+            QFontDatabase.SystemFont.GeneralFont).family()
+    HEADING_FAMILY = BODY_FAMILY = family
     return HEADING_FAMILY, BODY_FAMILY
 
 
-def heading_font(size: int) -> QFont:
-    font = QFont(HEADING_FAMILY, size)
-    font.setWeight(QFont.Weight.Bold)
+def ui_font(size: int = 11, *, heading: bool = False) -> QFont:
+    font = QFont(HEADING_FAMILY if heading else BODY_FAMILY, size)
+    font.setWeight(QFont.Weight.DemiBold if heading else QFont.Weight.Normal)
+    font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias |
+                          QFont.StyleStrategy.NoSubpixelAntialias)
     return font
+
+
+def heading_font(size: int) -> QFont:
+    return ui_font(size, heading=True)
 
 
 @lru_cache(maxsize=128)

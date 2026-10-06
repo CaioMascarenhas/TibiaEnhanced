@@ -5,9 +5,9 @@ from .palette import (ACCENT, ACCENT_HOVER, ACCENT_LIGHT, BACKGROUND,
                       PRIMARY_HOVER, SURFACE, SURFACE_HOVER, TEXT, TRACK)
 
 
-def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM Sans") -> str:
+def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe UI") -> str:
     return f"""
-    QWidget {{ color: {TEXT}; font-family: "{body_family}"; font-size: 9pt; font-weight: 500; }}
+    QWidget {{ color: {TEXT}; font-family: "{body_family}"; font-size: 11pt; font-weight: 400; }}
     QMainWindow {{ background: transparent; }}
     QWidget#appPage {{ background: {BACKGROUND}; }}
     QDialog, QMessageBox, QInputDialog {{ background: {INPUT}; }}
@@ -15,18 +15,18 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
 
     QLabel#brandTitle, QLabel#pageTitle, QLabel#sectionTitle,
     QLabel#selectedTitle, QLabel#timerTitle, QLabel#timerCountdown {{
-        font-family: "{heading_family}"; font-weight: 700;
+        font-family: "{heading_family}"; font-weight: 600;
     }}
     QLabel#brandTitle {{ color: {TEXT}; font-size: 13pt; }}
-    QLabel#brandSubtitle {{ color: #83a1be; font-size: 8pt; letter-spacing: 1px; }}
+    QLabel#brandSubtitle {{ color: #83a1be; font-size: 10pt; letter-spacing: 1px; }}
     QLabel#pageTitle {{ color: {TEXT}; font-size: 13pt; }}
     QLabel#sectionTitle {{ color: {TEXT}; font-size: 11pt; }}
     QLabel#selectedTitle {{ color: {TEXT}; font-size: 11pt; }}
     QLabel#timerTitle {{ color: {TEXT}; font-size: 11pt; }}
     QLabel#timerCountdown {{ color: {ACCENT_LIGHT}; font-size: 18pt; }}
-    QLabel#mutedText, QLabel#eyebrow {{ color: {MUTED}; font-weight: 600; }}
-    QLabel#eyebrow {{ font-size: 8pt; font-weight: 700; padding-top: 4px; }}
-    QLabel#stateBadge {{ font-size: 8pt; font-weight: 700; padding: 5px 9px; }}
+    QLabel#mutedText, QLabel#eyebrow {{ color: {MUTED}; font-weight: 400; }}
+    QLabel#eyebrow {{ font-size: 10pt; font-weight: 600; padding-top: 4px; }}
+    QLabel#stateBadge {{ font-size: 10pt; font-weight: 600; padding: 5px 9px; }}
     QLabel#statusText {{
         color: {MUTED}; background: {BACKGROUND};
         border: 1px solid {BACKGROUND}; border-radius: 9px; padding: 6px 10px;
@@ -41,22 +41,22 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
     QFrame#timerCard:hover {{ background: {SURFACE_HOVER}; border-color: #4b7972; border-left-color: {ACCENT_HOVER}; }}
     QFrame#dialogSurface {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 14px; }}
     QFrame#dialogBody, QFrame#dialogHeader {{ background: transparent; border: 0; }}
-    QLabel#dialogTitle {{ color: {TEXT}; font-family: "{heading_family}"; font-size: 13pt; font-weight: 700; }}
-    QLabel#footerCredit {{ color: #a7b9b5; font-size: 8pt; }}
+    QLabel#dialogTitle {{ color: {TEXT}; font-family: "{heading_family}"; font-size: 13pt; font-weight: 600; }}
+    QLabel#footerCredit {{ color: #a7b9b5; font-size: 10pt; }}
     QPushButton#iconButton {{ background: transparent; border: 0; padding: 2px; min-height: 0; border-radius: 5px; }}
     QPushButton#iconButton:hover {{ background: #35494a; }}
     QFrame#titleBar {{ background: transparent; border: 0; }}
     QFrame#profileControls {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 10px; }}
-    QLabel#profileLabel {{ color: {MUTED}; font-size: 8pt; font-weight: 600; }}
+    QLabel#profileLabel {{ color: {MUTED}; font-size: 10pt; font-weight: 600; }}
     QFrame#profileDivider {{ background: {BORDER}; border: 0; }}
     QComboBox#profileSelector {{ background: transparent; border: 0; border-radius: 6px; padding: 3px 4px; }}
     QComboBox#profileSelector:hover {{ background: {SURFACE_HOVER}; }}
     QComboBox#profileSelector:focus {{ background: {SURFACE_HOVER}; border: 0; }}
 
     QPushButton, QToolButton {{
-        color: {TEXT}; background: {ELEVATED}; font-weight: 700;
+        color: {TEXT}; background: {ELEVATED}; font-weight: 600;
         border: 1px solid {BORDER}; border-radius: 9px;
-        padding: 3px 8px; min-height: 18px;
+        padding: 5px 10px; min-height: 24px;
     }}
     QPushButton:hover, QToolButton:hover {{ background: {SURFACE_HOVER}; border-color: #66827e; }}
     QPushButton:pressed, QToolButton:pressed {{ background: #292c36; }}
@@ -65,7 +65,7 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
         color: #788da5; background: #1a283b; border-color: #2b3a4e;
     }}
     QPushButton#primaryButton {{
-        color: {TEXT}; background: {PRIMARY}; border-color: {ACCENT}; font-weight: 700;
+        color: {TEXT}; background: {PRIMARY}; border-color: {ACCENT}; font-weight: 600;
     }}
     QPushButton#primaryButton:hover {{ background: {PRIMARY_HOVER}; border-color: {ACCENT_LIGHT}; }}
     QPushButton#primaryButton:disabled {{ color: #91a6c0; background: #2d514e; border-color: #3c6964; }}
@@ -80,10 +80,10 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
     QComboBox, QLineEdit, QSpinBox, QKeySequenceEdit {{
         color: #f1f6ff; background: {INPUT};
         border: 1px solid {BORDER}; border-radius: 9px;
-        padding: 3px 8px; min-height: 18px;
+        padding: 5px 10px; min-height: 24px;
         selection-background-color: #277c70;
     }}
-    QComboBox, QLineEdit, QSpinBox, QKeySequenceEdit {{ font-weight: 600; }}
+    QComboBox, QLineEdit, QSpinBox, QKeySequenceEdit {{ font-weight: 400; }}
     QSpinBox::up-button, QSpinBox::down-button {{ width: 0; border: 0; }}
     QComboBox:hover, QLineEdit:hover, QSpinBox:hover, QKeySequenceEdit:hover {{ border-color: #63817c; }}
     QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QKeySequenceEdit:focus {{ border: 1px solid {ACCENT_HOVER}; }}
@@ -123,7 +123,7 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
     QTreeWidget::item:selected {{ color: {TEXT}; background: #2a5e56; }}
     QHeaderView::section {{
         color: {MUTED}; background: {SURFACE}; border: 0;
-        border-bottom: 1px solid {BORDER}; padding: 5px 7px; font-size: 8pt; font-weight: 700;
+        border-bottom: 1px solid {BORDER}; padding: 5px 7px; font-size: 10pt; font-weight: 600;
     }}
     QScrollArea#detailsScroll {{ background: transparent; border: 0; }}
     QScrollBar:vertical {{ width: 8px; background: transparent; margin: 3px 0; }}
@@ -136,12 +136,12 @@ def app_stylesheet(heading_family: str = "Space Grotesk", body_family: str = "DM
     QTabBar::tab {{
         color: {TEXT}; background: #1e292c;
         border: 1px solid {BORDER}; border-radius: 9px;
-        padding: 5px 10px; margin: 2px 3px 3px 3px; min-width: 68px;
+        padding: 7px 12px; margin: 2px 3px 3px 3px; min-width: 68px;
     }}
     QTabBar::tab:hover {{ background: #2e4648; color: {TEXT}; }}
-    QTabBar::tab:selected {{ color: #d5f5eb; background: #1e403c; border-color: {ACCENT}; font-weight: 700; }}
+    QTabBar::tab:selected {{ color: #d5f5eb; background: #1e403c; border-color: {ACCENT}; font-weight: 600; }}
     QTabBar::tab:focus {{ border: 1px solid {ACCENT_HOVER}; }}
-    QStatusBar {{ color: #a7b9b5; background: transparent; border-top: 1px solid {BORDER}; font-size: 8pt; }}
+    QStatusBar {{ color: #a7b9b5; background: transparent; border-top: 1px solid {BORDER}; font-size: 10pt; }}
     QStatusBar::item {{ border: 0; }}
     QMenu {{ color: {TEXT}; background: #213033; border: 1px solid #49615f; padding: 5px; }}
     QMenu::item {{ padding: 7px 24px; border-radius: 6px; }}

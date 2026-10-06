@@ -13,7 +13,7 @@ class _DialogHeader(QFrame):
         self.dialog = dialog
         self._drag_origin: QPoint | None = None
         self.setObjectName("dialogHeader")
-        self.setFixedHeight(34)
+        self.setFixedHeight(42)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 5)
         title_label = QLabel(title)

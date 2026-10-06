@@ -58,7 +58,7 @@ class TitleBar(QFrame):
         self.window = window
         self._drag_origin: QPoint | None = None
         self.setObjectName("titleBar")
-        self.setFixedHeight(44)
+        self.setFixedHeight(52)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 5, 11, 5)
         layout.setSpacing(0)
@@ -83,18 +83,18 @@ class TitleBar(QFrame):
 
         self.profile_controls = QFrame()
         self.profile_controls.setObjectName("profileControls")
-        self.profile_controls.setFixedHeight(32)
+        self.profile_controls.setFixedHeight(38)
         self._profile_scale = -1.0
         profile_row = QHBoxLayout(self.profile_controls)
         profile_row.setContentsMargins(7, 2, 4, 2)
         profile_row.setSpacing(3)
         profile_label = QLabel("Perfil")
         profile_label.setObjectName("profileLabel")
-        profile_label.setFixedWidth(30)
+        profile_label.setMinimumWidth(40)
         profile_row.addWidget(profile_label)
         self.profile_combo = WindowSelector()
         self.profile_combo.setObjectName("profileSelector")
-        self.profile_combo.setFixedWidth(115)
+        self.profile_combo.setFixedWidth(150)
         self.profile_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.profile_combo.setToolTip("Perfil local de recortes e alertas")
         self.profile_combo.currentTextChanged.connect(window._switch_profile)
@@ -144,14 +144,14 @@ class TitleBar(QFrame):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        # Preserve the compact opening size, then grow within a bounded range.
+        # Give the larger type room, then grow within a bounded range.
         scale = min(1.0, max(0.0, (self.window.width() - 680) / 720))
         if scale == self._profile_scale:
             return
         self._profile_scale = scale
-        self.profile_combo.setFixedWidth(round(115 + 165 * scale))
-        self.profile_controls.setFixedHeight(round(32 + 4 * scale))
-        self.setFixedHeight(round(44 + 4 * scale))
+        self.profile_combo.setFixedWidth(round(150 + 240 * scale))
+        self.profile_controls.setFixedHeight(round(38 + 4 * scale))
+        self.setFixedHeight(round(52 + 4 * scale))
         for button, name, base_size in self._profile_actions:
             button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
             size = round(base_size + 2 * scale)
@@ -219,8 +219,8 @@ class MainWindow(QMainWindow):
         self.setMouseTracking(True)
         self.setWindowTitle("Tibia Enhanced")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png")))
-        self.resize(680, 460)
-        self.setMinimumSize(560, 380)
+        self.resize(800, 560)
+        self.setMinimumSize(680, 460)
         self._title_bar = TitleBar(self)
         self.setMenuWidget(self._title_bar)
 

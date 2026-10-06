@@ -66,7 +66,7 @@ class CapturePanel(QWidget):
         self.window_combo = WindowSelector()
         source_row.addWidget(self.window_combo, 1)
         refresh_button = QPushButton()
-        refresh_button.setFixedWidth(30)
+        refresh_button.setFixedWidth(38)
         refresh_button.setIcon(icon("refresh-cw", size=16))
         refresh_button.setIconSize(QSize(16, 16))
         refresh_button.setToolTip("Atualizar a lista de janelas abertas")
@@ -368,12 +368,12 @@ class CapturePanel(QWidget):
         self._position_cards()
 
     def _position_cards(self) -> None:
-        columns = max(1, self.width() // 260)
+        columns = max(1, self.width() // 310)
         for index, card in enumerate(self._cards.values()):
             self.card_grid.removeWidget(card)
             self.card_grid.addWidget(card, index // columns, index % columns)
         rows = (len(self._cards) + columns - 1) // columns
-        self.card_grid.parentWidget().setMinimumHeight(max(0, rows * 91 - 7))
+        self.card_grid.parentWidget().setMinimumHeight(max(0, rows * 117 - 7))
 
     def _refresh_cards(self, selected_key: int | None = None) -> None:
         # Refresh the card collection after a mirror changes state.
@@ -400,8 +400,8 @@ class CapturePanel(QWidget):
         for entry in self._entries.values():
             card = QFrame()
             card.setObjectName("timerCard")
-            card.setFixedHeight(84)
-            card.setMaximumWidth(320)
+            card.setFixedHeight(110)
+            card.setMaximumWidth(380)
             box = QVBoxLayout(card)
             box.setContentsMargins(10, 8, 10, 8)
             box.setSpacing(5)

@@ -144,7 +144,7 @@ class TimerCard(QFrame):
         self.panel = panel
         self.removable = removable
         self.setObjectName("timerCard")
-        self.setFixedHeight(182)
+        self.setFixedHeight(210)
         self.audio_output = QAudioOutput(self)
         self.player = QMediaPlayer(self)
         self.player.setAudioOutput(self.audio_output)
@@ -401,13 +401,13 @@ class AudioPanel(QWidget):
         self._reflow_cards()
 
     def _reflow_cards(self) -> None:
-        columns = max(1, self.width() // 280)
+        columns = max(1, self.width() // 330)
         while self.card_layout.count():
             self.card_layout.takeAt(0)
         for index, card in enumerate(self.cards):
             self.card_layout.addWidget(card, index // columns, index % columns)
         rows = (len(self.cards) + columns - 1) // columns
-        self.card_layout.parentWidget().setMinimumHeight(max(0, rows * 191 - 9))
+        self.card_layout.parentWidget().setMinimumHeight(max(0, rows * 219 - 9))
 
     def _create(self) -> None:
         dialog = TimerDialog(self)
