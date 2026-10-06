@@ -14,20 +14,22 @@ from .palette import current_palette
 
 
 ASSETS = Path(__file__).resolve().parents[1]
-HEADING_FAMILY = "Nunito"
-BODY_FAMILY = "Nunito"
-_bundled_family = None
+HEADING_FAMILY = "Segoe UI"
+BODY_FAMILY = "Segoe UI"
+_loaded_family = None
 
 
 def load_fonts() -> tuple[str, str]:
-    """Registra a fonte arredondada distribuída com o aplicativo uma única vez."""
-    global HEADING_FAMILY, BODY_FAMILY, _bundled_family
-    if _bundled_family is None:
-        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "Nunito[wght].ttf"))
-        bundled = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
-        _bundled_family = bundled[0] if bundled else QFontDatabase.systemFont(
-            QFontDatabase.SystemFont.GeneralFont).family()
-    HEADING_FAMILY = BODY_FAMILY = _bundled_family
+    """Usa Segoe UI do Windows, com fallback local e registro único."""
+    global HEADING_FAMILY, BODY_FAMILY, _loaded_family
+    if _loaded_family is None:
+        _loaded_family = "Segoe UI"
+        if _loaded_family not in QFontDatabase.families():
+            font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "DMSans[opsz,wght].ttf"))
+            bundled = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
+            _loaded_family = bundled[0] if bundled else QFontDatabase.systemFont(
+                QFontDatabase.SystemFont.GeneralFont).family()
+    HEADING_FAMILY = BODY_FAMILY = _loaded_family
     return HEADING_FAMILY, BODY_FAMILY
 
 

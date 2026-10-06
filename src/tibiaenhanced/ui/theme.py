@@ -3,7 +3,7 @@
 from .palette import palette_for
 
 
-def app_stylesheet(heading_family: str = "Nunito", body_family: str = "Nunito", *, mode: str = "dark") -> str:
+def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe UI", *, mode: str = "dark") -> str:
     return """
     QWidget {{ color: {TEXT}; font-family: "{body_family}"; font-size: 14px; font-weight: 400; }}
     QMainWindow {{ background: {BACKGROUND}; }}

@@ -2,7 +2,7 @@
 
 ## Interface atual
 
-A revisão de legibilidade usa superfícies grafite neutras e azul suave nos controles. A fonte [Nunito](https://github.com/google/fonts/tree/main/ofl/nunito), com formas arredondadas, é distribuída localmente com sua licença OFL e recebe a renderização padrão do Windows; o aplicativo não força FreeType nem desativa a suavização subpixel. Texto principal de 14 px, apoio de 13 px com peso 500 e títulos de página de 24 px distinguem conteúdo e ações. Os textos auxiliares do tema escuro usam uma cor mais clara para facilitar a leitura.
+A revisão de legibilidade usa superfícies grafite neutras e azul suave nos controles. A fonte Segoe UI recebe a renderização padrão do Windows, com fallback para DM Sans, distribuída localmente com sua licença OFL; o aplicativo não força FreeType nem desativa a suavização subpixel. Texto principal de 14 px, apoio de 13 px com peso 500 e títulos de página de 24 px distinguem conteúdo e ações. Os textos auxiliares do tema escuro usam uma cor mais clara para facilitar a leitura.
 
 A janela inicial de 940 × 600 tem navegação lateral, perfil agrupado no cabeçalho, toolbars para origem e volume e estados vazios com uma única orientação. Cards adaptam as colunas à largura disponível, respeitam a altura do conteúdo e abreviam nomes longos com tooltip. Os diálogos seguem a mesma paleta, tipografia e espaçamento.
 

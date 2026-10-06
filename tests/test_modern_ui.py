@@ -31,10 +31,10 @@ class ModernUiTests(unittest.TestCase):
         self.assertIn(heading, QFontDatabase.families())
         self.assertIn(body, QFontDatabase.families())
         self.assertEqual(heading, body)
-        self.assertTrue(body.startswith("Nunito"))
+        self.assertEqual(body, "Segoe UI" if "Segoe UI" in QFontDatabase.families() else "DM Sans")
         self.assertEqual(heading_font(16).weight(), 600)
         self.assertFalse(icon("monitor").isNull())
-        for license_file in ("fonts/SPACE-GROTESK-OFL.txt", "fonts/DM-SANS-OFL.txt", "fonts/NUNITO-OFL.txt", "icons/LICENSE"):
+        for license_file in ("fonts/SPACE-GROTESK-OFL.txt", "fonts/DM-SANS-OFL.txt", "icons/LICENSE"):
             self.assertTrue((ASSETS / license_file).is_file())
 
     def test_main_window_has_compact_rounded_chrome(self) -> None:

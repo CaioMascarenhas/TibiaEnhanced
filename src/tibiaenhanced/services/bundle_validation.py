@@ -166,8 +166,9 @@ def run_validation(report_file, screenshot_file=None, *, native=True):
         app = create_application([sys.argv[0]])
         # Nomes resolvidos após create_application registrar as fontes.
         from ..ui import design
-        check("fonts", design.HEADING_FAMILY == design.BODY_FAMILY == "Nunito")
-        check("font_license", (ASSETS / "fonts" / "NUNITO-OFL.txt").is_file())
+        check("fonts", design.HEADING_FAMILY == design.BODY_FAMILY
+              and (design.BODY_FAMILY == "Segoe UI" or design.BODY_FAMILY.startswith("DM Sans")))
+        check("fallback_font_license", (ASSETS / "fonts" / "DM-SANS-OFL.txt").is_file())
         for path in (ASSETS / "icons").glob("*.svg"):
             check("svg_" + path.stem, QSvgRenderer(str(path)).isValid())
         for path in (ASSETS / "imgs").rglob("*.png"):
