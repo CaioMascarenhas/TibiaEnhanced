@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .design import heading_font, medieval_cursor, set_icon
+from .design import ToggleCheckBox, heading_font, medieval_cursor, set_icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .donate_panel import DonatePanel
@@ -33,6 +33,7 @@ from .palette import current_palette
 from .theme_manager import theme_manager
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
+from ..services.window_frame import request_rounded_corners
 from ..models import NAME_MAX_LENGTH
 from .window_selector import WindowSelector
 
@@ -86,7 +87,7 @@ class TitleBar(QFrame):
         self.profile_controls = QFrame()
         self.profile_controls.setObjectName("profileControls")
         self.profile_controls.setFixedHeight(36)
-        self._profile_scale = -1.0
+        self._profile_sizes = None
         profile_row = QHBoxLayout(self.profile_controls)
         profile_row.setContentsMargins(7, 2, 4, 2)
         profile_row.setSpacing(3)
@@ -148,13 +149,15 @@ class TitleBar(QFrame):
         super().resizeEvent(event)
         # Grow the profile name without crowding the brand or window controls.
         scale = min(1.0, max(0.0, (self.window.width() - 800) / 800))
-        if scale == self._profile_scale:
+        sizes = (round(145 + 125 * scale), round(24 + 6 * scale),
+                 round(27 + 4 * scale), round(2 * scale))
+        if sizes == self._profile_sizes:
             return
-        self._profile_scale = scale
-        self.profile_combo.setFixedWidth(round(145 + 125 * scale))
+        self._profile_sizes = sizes
+        self.profile_combo.setFixedWidth(sizes[0])
         for button, name, base_size in self._profile_actions:
-            button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
-            size = round(base_size + 2 * scale)
+            button.setFixedSize(sizes[1], sizes[2])
+            size = base_size + sizes[3]
             set_icon(button, name, size=size)
             button.setIconSize(QSize(size, size))
 
@@ -214,8 +217,12 @@ class MainWindow(QMainWindow):
         self._exiting = False
         self._tray: QSystemTrayIcon | None = None
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setContentsMargins(7, 7, 7, 7)
+        # A layered, per-pixel-alpha window can lose its backing store during
+        # native Windows resize. The shell is opaque; DWM clips its corners.
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
+        self._native_corner_handle = None
+        self._native_corners = False
+        self.setContentsMargins(1, 1, 1, 1)
         self.setMouseTracking(True)
         self.setWindowTitle("Tibia Enhanced")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png")))
@@ -235,7 +242,7 @@ class MainWindow(QMainWindow):
         navigation = QVBoxLayout(sidebar)
         navigation.setContentsMargins(10, 21, 10, 18)
         navigation.setSpacing(6)
-        navigation_label = QLabel("ESPAÇO DE TRABALHO")
+        navigation_label = QLabel("FERRAMENTAS")
         navigation_label.setObjectName("navigationLabel")
         navigation.addWidget(navigation_label)
         navigation.addSpacing(5)
@@ -263,11 +270,19 @@ class MainWindow(QMainWindow):
             self.navigation_buttons.append(button)
             navigation.addWidget(button)
         navigation.addStretch()
-        self.theme_button = QPushButton()
-        self.theme_button.setObjectName("themeButton")
-        self.theme_button.setAccessibleName("Alternar entre tema claro e escuro")
-        self.theme_button.clicked.connect(self._toggle_theme)
-        navigation.addWidget(self.theme_button)
+        appearance = QFrame()
+        appearance.setObjectName("appearanceControls")
+        appearance_layout = QVBoxLayout(appearance)
+        appearance_layout.setContentsMargins(10, 12, 4, 0)
+        appearance_layout.setSpacing(8)
+        appearance_label = QLabel("APARÊNCIA")
+        appearance_label.setObjectName("appearanceLabel")
+        appearance_layout.addWidget(appearance_label)
+        self.theme_switch = ToggleCheckBox("Modo escuro")
+        self.theme_switch.setAccessibleName("Modo escuro")
+        self.theme_switch.toggled.connect(self._set_dark_theme)
+        appearance_layout.addWidget(self.theme_switch)
+        navigation.addWidget(appearance)
         workspace_row.addWidget(sidebar)
         workspace_row.addWidget(self.pages, 1)
         self.pages.currentChanged.connect(self._update_navigation)
@@ -301,8 +316,8 @@ class MainWindow(QMainWindow):
             self._theme_manager.apply(self._profile_store.data.get("theme", "dark"))
         self._refresh_theme()
 
-    def _toggle_theme(self) -> None:
-        self._theme_manager.apply("light" if self._theme_manager.mode == "dark" else "dark")
+    def _set_dark_theme(self, checked: bool) -> None:
+        self._theme_manager.apply("dark" if checked else "light")
 
     def _on_theme_changed(self, mode: str) -> None:
         if self._profiles_enabled and not self._exiting:
@@ -316,9 +331,12 @@ class MainWindow(QMainWindow):
             'Feito por <a href="https://github.com/CaioMascarenhas" '
             f'style="color: {colors["ACCENT_LIGHT"]}; text-decoration: none;">Mascarenhas</a>')
         light = theme_manager().mode == "light"
-        self.theme_button.setText("Modo escuro" if light else "Modo claro")
-        self.theme_button.setToolTip("Ativar tema escuro" if light else "Ativar tema claro")
-        set_icon(self.theme_button, "moon" if light else "sun", size=18)
+        if self.theme_switch.isChecked() == light:
+            self.theme_switch.blockSignals(True)
+            self.theme_switch.setChecked(not light)
+            self.theme_switch.blockSignals(False)
+            self.theme_switch._animate_to_state(not light)
+        self.theme_switch.setToolTip("Ativar tema escuro" if light else "Ativar tema claro")
 
     def _update_navigation(self, index: int) -> None:
         for position, (button, symbol) in enumerate(zip(
@@ -474,13 +492,39 @@ class MainWindow(QMainWindow):
         colors = current_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        inset = 0 if self.isMaximized() else 6
-        radius = 0 if self.isMaximized() else 17
-        rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
+        painter.fillRect(self.rect(), QColor(colors["BACKGROUND"]))
+        radius = 0 if self.isMaximized() else 12
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
         painter.setPen(QPen(QColor(colors["BORDER"]), 1))
         painter.setBrush(QColor(colors["BACKGROUND"]))
         painter.drawRoundedRect(rect, radius, radius)
         super().paintEvent(event)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if QApplication.instance().platformName() == "windows":
+            handle = int(self.winId())
+            if handle != self._native_corner_handle:
+                self._native_corner_handle = handle
+                self._native_corners = request_rounded_corners(handle)
+            self._update_window_shape()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_window_shape()
+
+    def _update_window_shape(self) -> None:
+        if QApplication.instance().platformName() != "windows":
+            return
+        if self.isMaximized() or self._native_corners:
+            if not self.mask().isEmpty():
+                self.clearMask()
+        else:
+            # Windows 10 fallback: a binary clipping region still keeps the
+            # window opaque and avoids layered-window uploads while resizing.
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(self.rect()), 12, 12)
+            self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
     def _resize_edges(self, point: QPoint) -> Qt.Edges:
         if self.isMaximized():
@@ -533,8 +577,9 @@ class MainWindow(QMainWindow):
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.WindowStateChange:
             self.setCursor(medieval_cursor(ratio=self.devicePixelRatioF()))
-            inset = 0 if self.isMaximized() else 7
+            inset = 0 if self.isMaximized() else 1
             self.setContentsMargins(inset, inset, inset, inset)
+            self._update_window_shape()
             if hasattr(self, "_title_bar"):
                 self._title_bar.update_maximize_button()
             self.update()

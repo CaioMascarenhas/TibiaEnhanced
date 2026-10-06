@@ -1,6 +1,6 @@
 """Doações voluntárias por Tibia Coins ou Pix."""
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QLabel,
                                QPushButton, QScrollArea, QVBoxLayout, QWidget)
@@ -99,14 +99,27 @@ class DonatePanel(QWidget):
         qr_layout.addWidget(hint)
         self.scroll.setWidget(container)
         layout.addWidget(self.scroll, 1)
+        self.scroll.viewport().installEventFilter(self)
         self._reflow_cards()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._reflow_cards()
 
+    def eventFilter(self, watched, event) -> bool:
+        if watched is self.scroll.viewport() and event.type() == QEvent.Type.Resize:
+            self._reflow_cards()
+        return super().eventFilter(watched, event)
+
     def _reflow_cards(self) -> None:
-        horizontal = self.width() - 54 >= 580
+        available = (self.scroll.maximumViewportSize().width()
+                     - self.scroll.verticalScrollBar().sizeHint().width() - 6)
+        required = (self.details_card.minimumSizeHint().width()
+                    + self.qr_card.minimumSizeHint().width() + self.cards_layout.spacing())
+        horizontal = available >= max(600, required)
+        if horizontal == getattr(self, "_horizontal_cards", None):
+            return
+        self._horizontal_cards = horizontal
         self.cards_layout.removeWidget(self.details_card)
         self.cards_layout.removeWidget(self.qr_card)
         self.cards_layout.addWidget(self.details_card, 0, 0)

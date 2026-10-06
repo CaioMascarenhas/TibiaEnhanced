@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from .card_grid import arrange_cards
 from PySide6.QtWidgets import (QDialog, QFrame, QGridLayout, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox,
                                QPushButton, QScrollArea,
@@ -426,18 +427,8 @@ class CapturePanel(QWidget):
         return super().eventFilter(watched, event)
 
     def _position_cards(self) -> None:
-        available_width = max(1, self.card_scroll.viewport().width() - 6)
-        columns = max(1, (available_width + self.card_grid.spacing()) // 310)
         self.card_grid.setAlignment(Qt.AlignmentFlag.AlignTop if self._cards else Qt.AlignmentFlag(0))
-        for index, card in enumerate(self._cards.values()):
-            self.card_grid.removeWidget(card)
-            self.card_grid.addWidget(card, index // columns, index % columns)
-        cards = list(self._cards.values())
-        row_heights = [max(max(card.minimumHeight(), card.sizeHint().height())
-                           for card in cards[start:start + columns])
-                       for start in range(0, len(cards), columns)]
-        self.card_grid.parentWidget().setMinimumHeight(
-            sum(row_heights) + max(0, len(row_heights) - 1) * self.card_grid.spacing())
+        arrange_cards(self.card_scroll, self.card_grid, list(self._cards.values()), 310)
 
     def _refresh_cards(self, selected_key: int | None = None) -> None:
         # Refresh the card collection after a mirror changes state.

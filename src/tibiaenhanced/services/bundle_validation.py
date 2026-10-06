@@ -166,7 +166,8 @@ def run_validation(report_file, screenshot_file=None, *, native=True):
         app = create_application([sys.argv[0]])
         # Nomes resolvidos após create_application registrar as fontes.
         from ..ui import design
-        check("fonts", design.HEADING_FAMILY == "Space Grotesk" and design.BODY_FAMILY.startswith("DM Sans"))
+        check("fonts", design.HEADING_FAMILY == design.BODY_FAMILY == "Nunito")
+        check("font_license", (ASSETS / "fonts" / "NUNITO-OFL.txt").is_file())
         for path in (ASSETS / "icons").glob("*.svg"):
             check("svg_" + path.stem, QSvgRenderer(str(path)).isValid())
         for path in (ASSETS / "imgs").rglob("*.png"):
@@ -177,8 +178,9 @@ def run_validation(report_file, screenshot_file=None, *, native=True):
             window = MainWindow(profiles)
             window.show()
             QApplication.processEvents()
-            tabs = window.centralWidget()
-            check("tabs", [tabs.tabText(i) for i in range(tabs.count())] == ["Recortes", "Alertas", "Donate"])
+            tabs = window.pages
+            check("navigation", [button.text() for button in window.navigation_buttons]
+                  == ["Recortes", "Alertas", "Apoiar"] and tabs.count() == 3)
             check("app_icon", not window.windowIcon().isNull())
             window.audio_panel.cards[0].loop_check.setChecked(True)
             window._save_profile()
@@ -217,7 +219,7 @@ def run_validation(report_file, screenshot_file=None, *, native=True):
             check("qr_present", not donate.qr_label.pixmap().isNull())
             if screenshot_file:
                 check("screenshot", window.grab().save(str(screenshot_file)))
-            for width, height in ((680, 460), (560, 380)):
+            for width, height in ((940, 600), (800, 500)):
                 window.resize(width, height)
                 QApplication.processEvents()
                 check(f"layout_{width}", donate.scroll.horizontalScrollBar().maximum() == 0)

@@ -14,21 +14,20 @@ from .palette import current_palette
 
 
 ASSETS = Path(__file__).resolve().parents[1]
-HEADING_FAMILY = "Segoe UI"
-BODY_FAMILY = "Segoe UI"
+HEADING_FAMILY = "Nunito"
+BODY_FAMILY = "Nunito"
+_bundled_family = None
 
 
 def load_fonts() -> tuple[str, str]:
-    """Usa a fonte de interface do Windows, com fallback para outros ambientes."""
-    global HEADING_FAMILY, BODY_FAMILY
-    families = QFontDatabase.families()
-    family = "Segoe UI"
-    if family not in families:
-        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "DMSans[opsz,wght].ttf"))
+    """Registra a fonte arredondada distribuída com o aplicativo uma única vez."""
+    global HEADING_FAMILY, BODY_FAMILY, _bundled_family
+    if _bundled_family is None:
+        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "Nunito[wght].ttf"))
         bundled = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
-        family = bundled[0] if bundled else QFontDatabase.systemFont(
+        _bundled_family = bundled[0] if bundled else QFontDatabase.systemFont(
             QFontDatabase.SystemFont.GeneralFont).family()
-    HEADING_FAMILY = BODY_FAMILY = family
+    HEADING_FAMILY = BODY_FAMILY = _bundled_family
     return HEADING_FAMILY, BODY_FAMILY
 
 
@@ -313,6 +312,9 @@ class ToggleCheckBox(QCheckBox):
 
     def sizeHint(self) -> QSize:
         return QSize(46 + self.fontMetrics().horizontalAdvance(self.text()), 26)
+
+    def hitButton(self, position) -> bool:
+        return self.rect().contains(position)
 
     def enterEvent(self, event) -> None:
         super().enterEvent(event)

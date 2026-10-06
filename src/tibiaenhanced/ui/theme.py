@@ -3,10 +3,10 @@
 from .palette import palette_for
 
 
-def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe UI", *, mode: str = "dark") -> str:
+def app_stylesheet(heading_family: str = "Nunito", body_family: str = "Nunito", *, mode: str = "dark") -> str:
     return """
     QWidget {{ color: {TEXT}; font-family: "{body_family}"; font-size: 14px; font-weight: 400; }}
-    QMainWindow {{ background: transparent; }}
+    QMainWindow {{ background: {BACKGROUND}; }}
     QWidget#appPage, QWidget#appWorkspace {{ background: {BACKGROUND}; }}
     QDialog, QMessageBox, QInputDialog {{ background: {SURFACE}; }}
     QLabel {{ background: transparent; }}
@@ -20,9 +20,9 @@ def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe U
     QLabel#dialogTitle {{ font-size: 19px; }}
     QLabel#emptyTitle {{ color: {TEXT}; font-size: 18px; }}
     QLabel#mutedText, QLabel#pageDescription, QLabel#timerStatus,
-    QLabel#timerShortcut {{ color: {MUTED}; font-size: 13px; }}
+    QLabel#timerShortcut {{ color: {MUTED}; font-size: 13px; font-weight: 500; }}
     QLabel#eyebrow {{ color: {MUTED}; font-size: 12px; font-weight: 600; }}
-    QLabel#percentageLabel {{ color: {MUTED}; font-size: 13px; }}
+    QLabel#percentageLabel {{ color: {MUTED}; font-size: 13px; font-weight: 500; }}
     QLabel#stateBadge {{ font-size: 12px; font-weight: 600; padding: 6px 10px; }}
     QLabel#statusText {{ color: {MUTED}; font-size: 13px; padding: 6px 0; }}
     QLabel#brandIcon {{ background: transparent; border: 0; }}
@@ -33,6 +33,8 @@ def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe U
         border-top-left-radius: 11px; border-top-right-radius: 11px; }}
     QFrame#sidebar {{ background: {SIDEBAR}; border: 0; border-right: 1px solid {BORDER}; }}
     QLabel#navigationLabel {{ color: {MUTED}; font-size: 11px; font-weight: 600; padding: 4px 12px; }}
+    QFrame#appearanceControls {{ background: transparent; border: 0; border-top: 1px solid {BORDER}; }}
+    QLabel#appearanceLabel {{ color: {MUTED}; font-size: 11px; font-weight: 600; }}
     QPushButton#navigationButton {{ text-align: left; color: {MUTED}; background: transparent;
         border: 1px solid transparent; border-radius: 8px; padding: 9px 12px; min-height: 22px; }}
     QPushButton#navigationButton:hover {{ color: {TEXT}; background: {SURFACE_HOVER}; }}

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer, QUrl, Signal
+from .card_grid import arrange_cards
 from PySide6.QtGui import QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -446,17 +447,7 @@ class AudioPanel(QWidget):
         return super().eventFilter(watched, event)
 
     def _reflow_cards(self) -> None:
-        available_width = max(1, self.card_scroll.viewport().width() - 6)
-        columns = max(1, (available_width + self.card_layout.spacing()) // 330)
-        while self.card_layout.count():
-            self.card_layout.takeAt(0)
-        for index, card in enumerate(self.cards):
-            self.card_layout.addWidget(card, index // columns, index % columns)
-        row_heights = [max(max(card.minimumHeight(), card.sizeHint().height())
-                           for card in self.cards[start:start + columns])
-                       for start in range(0, len(self.cards), columns)]
-        self.card_layout.parentWidget().setMinimumHeight(
-            sum(row_heights) + max(0, len(row_heights) - 1) * self.card_layout.spacing())
+        arrange_cards(self.card_scroll, self.card_layout, self.cards, 330)
 
     def _create(self) -> None:
         dialog = TimerDialog(self)

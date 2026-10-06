@@ -11,7 +11,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtGui import QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 from tibiaenhanced.services.profiles import ProfileStore
 from tibiaenhanced.ui.audio_panel import TimerDialog
 from tibiaenhanced.ui.design import load_fonts
@@ -60,16 +60,17 @@ class ColorThemeTests(unittest.TestCase):
                            return_value=SimpleNamespace(width=800, height=600)):
                     selection_dialog = DwmRegionDialog(42)
                 self.addCleanup(selection_dialog.close)
-                close_button = timer_dialog.findChildren(type(window.theme_button))[0]
+                close_button = timer_dialog.findChildren(QPushButton)[0]
                 old_icon = close_button.icon().pixmap(16, 16).toImage()
                 arrow = window.capture_panel.window_combo._arrow
                 old_arrow = arrow.pixmap().toImage()
                 card_identity, volume_width, geometry = id(card), card.volume.width(), window.size()
-                window.theme_button.click()
+                self.assertTrue(window.theme_switch.isChecked())
+                window.theme_switch.click()
                 self.app.processEvents()
                 self.assertEqual(manager.mode, "light")
                 self.assertEqual(current_palette(), LIGHT)
-                self.assertEqual(window.theme_button.text(), "Modo escuro")
+                self.assertFalse(window.theme_switch.isChecked())
                 self.assertEqual(window.pages.currentIndex(), 1)
                 self.assertEqual(window.size(), geometry)
                 self.assertEqual(id(window.audio_panel.cards[0]), card_identity)
@@ -87,19 +88,19 @@ class ColorThemeTests(unittest.TestCase):
                 self.assertTrue(window._save_profile())
                 saved = json.loads(store.path.read_text(encoding="utf-8"))
                 self.assertEqual(saved["theme"], "light")
-                window.theme_button.click()
+                window.theme_switch.click()
                 self.app.processEvents()
                 self.assertEqual(manager.mode, "dark")
                 self.assertEqual(card.volume.accent, DARK["ACCENT"])
                 self.assertTrue(card.timer.running)
-                self.assertEqual(window.theme_button.text(), "Modo claro")
+                self.assertTrue(window.theme_switch.isChecked())
                 window._save_timer.stop()
                 restored = ProfileStore(store.path)
                 self.assertEqual(restored.load(), [])
                 restored_window = MainWindow(restored)
                 try:
                     self.assertEqual(manager.mode, "light")
-                    self.assertEqual(restored_window.theme_button.text(), "Modo escuro")
+                    self.assertFalse(restored_window.theme_switch.isChecked())
                 finally:
                     restored_window._exiting = True
                     restored_window.capture_panel.shutdown()
