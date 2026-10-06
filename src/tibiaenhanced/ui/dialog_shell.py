@@ -4,7 +4,7 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
-from .design import heading_font, icon
+from .design import heading_font, set_icon
 
 
 class _DialogHeader(QFrame):
@@ -26,7 +26,7 @@ class _DialogHeader(QFrame):
         close = QPushButton()
         close.setObjectName("iconButton")
         close.setFixedSize(30, 30)
-        close.setIcon(icon("x", "#e9edf6", 15))
+        set_icon(close, "x", size=15)
         close.setToolTip("Fechar")
         close.setAccessibleName("Fechar")
         close.clicked.connect(dialog.reject)

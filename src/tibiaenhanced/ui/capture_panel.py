@@ -11,11 +11,11 @@ from PySide6.QtWidgets import (QDialog, QFrame, QGridLayout, QHBoxLayout,
 from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.windowing import get_client_area, list_windows
 from .dwm_windows import DwmMirrorWindow, DwmRegionDialog
-from .design import icon
+from .design import set_icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
 from .elided_label import ElidedLabel
-from .palette import ACCENT_LIGHT, MUTED, SURFACE_HOVER
+from .palette import current_palette
 from .window_selector import WindowSelector
 
 
@@ -80,7 +80,7 @@ class CapturePanel(QWidget):
         heading.addLayout(heading_text, 1)
         self.add_button = QPushButton("Novo recorte")
         self.add_button.setObjectName("primaryButton")
-        self.add_button.setIcon(icon("plus", "#ffffff", 16))
+        set_icon(self.add_button, "plus", role="PRIMARY_TEXT", size=16)
         self.add_button.setIconSize(QSize(16, 16))
         self.add_button.setToolTip("Escolher uma área e criar um espelho")
         self.add_button.clicked.connect(self.add_mirror)
@@ -101,7 +101,7 @@ class CapturePanel(QWidget):
         source_row.addWidget(self.window_combo, 1)
         refresh_button = QPushButton()
         refresh_button.setFixedWidth(38)
-        refresh_button.setIcon(icon("refresh-cw", size=16))
+        set_icon(refresh_button, "refresh-cw", size=16)
         refresh_button.setIconSize(QSize(16, 16))
         refresh_button.setToolTip("Atualizar a lista de janelas abertas")
         refresh_button.clicked.connect(self.refresh_windows)
@@ -139,7 +139,7 @@ class CapturePanel(QWidget):
         empty_icon.setObjectName("emptyIcon")
         empty_icon.setFixedSize(56, 56)
         empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        empty_icon.setPixmap(icon("monitor", MUTED, 36).pixmap(36, 36))
+        set_icon(empty_icon, "monitor", role="MUTED", size=36)
         empty.addWidget(empty_icon, alignment=Qt.AlignmentFlag.AlignHCenter)
         empty_title = QLabel("Seu primeiro recorte começa aqui")
         empty_title.setObjectName("emptyTitle")
@@ -184,16 +184,16 @@ class CapturePanel(QWidget):
         self.show_button.clicked.connect(self.toggle_visibility)
         actions.addWidget(self.show_button, 0, 0)
         self.lock_button = QPushButton("Bloquear cliques")
-        self.lock_button.setIcon(icon("lock-keyhole", size=16))
+        set_icon(self.lock_button, "lock-keyhole", size=16)
         self.lock_button.clicked.connect(self.toggle_lock)
         actions.addWidget(self.lock_button, 0, 1)
         self.rename_button = QPushButton("Renomear")
-        self.rename_button.setIcon(icon("pencil", size=16))
+        set_icon(self.rename_button, "pencil", size=16)
         self.rename_button.clicked.connect(self.rename_current)
         actions.addWidget(self.rename_button, 1, 0)
         self.delete_button = QPushButton("Excluir recorte")
         self.delete_button.setObjectName("dangerButton")
-        self.delete_button.setIcon(icon("trash", "#ffc6cb", 16))
+        set_icon(self.delete_button, "trash", role="DANGER_TEXT", size=16)
         self.delete_button.clicked.connect(self.delete_current)
         actions.addWidget(self.delete_button, 1, 1)
         detail_layout.addLayout(actions)
@@ -488,7 +488,7 @@ class CapturePanel(QWidget):
                 button = QPushButton()
                 button.setObjectName("iconButton")
                 button.setFixedSize(28, 28)
-                button.setIcon(icon(name, size=16))
+                set_icon(button, name, size=16)
                 button.setToolTip(tooltip)
                 button.setAccessibleName(tooltip)
                 button.clicked.connect(lambda checked=False, key=entry.key, fn=callback: self._card_action(key, fn))
@@ -527,7 +527,11 @@ class CapturePanel(QWidget):
         self._change_transparency(100 - percent)
         label.setText(f"{percent}%")
 
+    def _refresh_theme(self) -> None:
+        self._update_controls()
+
     def _update_controls(self) -> None:
+        colors = current_palette()
         self.add_button.setEnabled(self.window_combo.currentData() is not None)
         self.bind_button.setEnabled((bool(self._pending_mirrors) or any(
             item.recovering for item in self._entries.values()))
@@ -543,7 +547,7 @@ class CapturePanel(QWidget):
             self.selected_coordinates.clear()
             self.state_label.setText("Sem seleção")
             self.state_label.setStyleSheet(
-                f"color: {MUTED}; background: {SURFACE_HOVER}; padding: 5px 9px; border-radius: 7px;")
+                f"color: {colors['MUTED']}; background: {colors['SURFACE_HOVER']}; padding: 5px 9px; border-radius: 7px;")
             self.transparency_label.setText("Transparência  —")
             return
         self.selected_name.setText(entry.region.name)
@@ -554,14 +558,14 @@ class CapturePanel(QWidget):
         state = "Aguardando origem" if entry.recovering else ("Visível" if entry.visible else "Oculto")
         state += " · Cliques bloqueados" if entry.locked else " · Editável"
         self.state_label.setText(state)
-        bg, fg = SURFACE_HOVER, ACCENT_LIGHT if entry.visible else MUTED
+        bg, fg = colors["SURFACE_HOVER"], colors["ACCENT_LIGHT"] if entry.visible else colors["MUTED"]
         self.state_label.setStyleSheet(
             f"color: {fg}; background: {bg}; padding: 5px 9px; border-radius: 7px;")
         self.show_button.setText("Cancelar recuperação" if entry.recovering else
                                  ("Ocultar espelho" if entry.visible else "Mostrar espelho"))
-        self.show_button.setIcon(icon("eye-off" if entry.visible else "eye", size=16))
+        set_icon(self.show_button, "eye-off" if entry.visible else "eye", size=16)
         self.lock_button.setText("Desbloquear cliques" if entry.locked else "Bloquear cliques")
-        self.lock_button.setIcon(icon("lock-keyhole-open" if entry.locked else "lock-keyhole", size=16))
+        set_icon(self.lock_button, "lock-keyhole-open" if entry.locked else "lock-keyhole", size=16)
         self.fit_combo.blockSignals(True)
         self.fit_combo.setCurrentIndex(self.fit_combo.findData(entry.fit_mode))
         self.fit_combo.blockSignals(False)

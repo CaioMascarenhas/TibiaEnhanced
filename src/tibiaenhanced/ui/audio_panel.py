@@ -15,11 +15,10 @@ from PySide6.QtWidgets import (
 
 from ..services.audio_timer import AudioTimer
 from ..models import NAME_MAX_LENGTH
-from .design import ToggleCheckBox, icon
+from .design import ToggleCheckBox, set_icon
 from .design import CompactSlider as QSlider
 from .dialog_shell import StyledDialog
 from .elided_label import ElidedLabel
-from .palette import ACCENT
 
 
 ASSETS = Path(__file__).resolve().parents[1]
@@ -81,12 +80,12 @@ class TimerDialog(StyledDialog):
         self.duration_input.setValue(timer.duration_seconds if timer else 600)
         self.sound_input = QLineEdit(str(timer.sound_file) if timer else "")
         browse = QPushButton("Escolher…")
-        browse.setIcon(icon("plus", size=15))
+        set_icon(browse, "plus", size=15)
         browse.clicked.connect(self._browse)
         sound_row = QHBoxLayout()
         sound_row.addWidget(self.sound_input, 1)
         sound_row.addWidget(browse)
-        self.volume_input = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
+        self.volume_input = QSlider(Qt.Orientation.Horizontal)
         self.volume_input.setRange(0, 100)
         self.volume_input.setValue(round(timer.volume * 100) if timer else 100)
         volume_row = QHBoxLayout()
@@ -210,9 +209,9 @@ class TimerCard(QFrame):
         layout.addLayout(options)
         volume_row = QHBoxLayout()
         volume_icon = QLabel()
-        volume_icon.setPixmap(icon("volume-2", size=16).pixmap(16, 16))
+        set_icon(volume_icon, "volume-2", size=16)
         volume_row.addWidget(volume_icon)
-        self.volume = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
+        self.volume = QSlider(Qt.Orientation.Horizontal)
         self.volume.setAccessibleName("Volume do alerta")
         self.volume.setToolTip("Volume do alerta")
         self.volume.setRange(0, 100)
@@ -244,7 +243,7 @@ class TimerCard(QFrame):
             button = QPushButton()
             button.setObjectName("iconButton")
             button.setFixedSize(28, 28)
-            button.setIcon(icon(name, size=16))
+            set_icon(button, name, size=16)
             button.setToolTip(tooltip)
             button.setAccessibleName(tooltip)
             button.clicked.connect(callback)
@@ -320,19 +319,19 @@ class TimerCard(QFrame):
         if self.timer.running:
             self.status.setText("Em andamento")
             self.start_button.setText("Pausar")
-            self.start_button.setIcon(icon("pause", "#ffffff", 15))
+            set_icon(self.start_button, "pause", role="PRIMARY_TEXT", size=15)
         elif self.timer.finished:
             self.status.setText("Concluído")
             self.start_button.setText("Iniciar")
-            self.start_button.setIcon(icon("play", "#ffffff", 15))
+            set_icon(self.start_button, "play", role="PRIMARY_TEXT", size=15)
         elif self.timer.remaining() < self.timer.duration_seconds:
             self.status.setText("Pausado")
             self.start_button.setText("Retomar")
-            self.start_button.setIcon(icon("play", "#ffffff", 15))
+            set_icon(self.start_button, "play", role="PRIMARY_TEXT", size=15)
         else:
             self.status.setText("Pronto")
             self.start_button.setText("Iniciar")
-            self.start_button.setIcon(icon("play", "#ffffff", 15))
+            set_icon(self.start_button, "play", role="PRIMARY_TEXT", size=15)
 
 
 class AudioPanel(QWidget):
@@ -360,7 +359,7 @@ class AudioPanel(QWidget):
         heading.addLayout(heading_text, 1)
         create = QPushButton("Novo timer")
         create.setObjectName("primaryButton")
-        create.setIcon(icon("plus", "#ffffff", 16))
+        set_icon(create, "plus", role="PRIMARY_TEXT", size=16)
         create.setIconSize(QSize(16, 16))
         create.clicked.connect(self._create)
         heading.addWidget(create, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -371,10 +370,10 @@ class AudioPanel(QWidget):
         volume_row.setContentsMargins(14, 12, 14, 12)
         volume_row.setSpacing(10)
         volume_icon = QLabel()
-        volume_icon.setPixmap(icon("volume-2", "#b6cfe3", 18).pixmap(18, 18))
+        set_icon(volume_icon, "volume-2", size=18)
         volume_row.addWidget(volume_icon)
         volume_row.addWidget(QLabel("Volume geral"))
-        self.master_volume = QSlider(Qt.Orientation.Horizontal, accent=ACCENT)
+        self.master_volume = QSlider(Qt.Orientation.Horizontal)
         self.master_volume.setAccessibleName("Volume geral dos alertas")
         self.master_volume.setRange(0, 100)
         self.master_volume.setValue(50)

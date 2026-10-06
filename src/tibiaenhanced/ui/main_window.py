@@ -25,11 +25,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .design import heading_font, icon, medieval_cursor
+from .design import heading_font, medieval_cursor, set_icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .donate_panel import DonatePanel
-from .palette import ACCENT_LIGHT, BACKGROUND, BORDER, MUTED
+from .palette import current_palette
+from .theme_manager import theme_manager
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
 from ..models import NAME_MAX_LENGTH
@@ -107,7 +108,7 @@ class TitleBar(QFrame):
         create_profile = QPushButton()
         create_profile.setObjectName("iconButton")
         create_profile.setFixedSize(24, 27)
-        create_profile.setIcon(icon("plus", size=16))
+        set_icon(create_profile, "plus", size=16)
         create_profile.setToolTip("Criar perfil")
         create_profile.setAccessibleName("Criar perfil")
         create_profile.clicked.connect(window._create_profile)
@@ -115,7 +116,7 @@ class TitleBar(QFrame):
         manage_profile = QPushButton()
         manage_profile.setObjectName("iconButton")
         manage_profile.setFixedSize(24, 27)
-        manage_profile.setIcon(icon("pencil", size=15))
+        set_icon(manage_profile, "pencil", size=15)
         manage_profile.setToolTip("Gerenciar perfil")
         manage_profile.setAccessibleName("Gerenciar perfil")
         self.profile_menu = QMenu(manage_profile)
@@ -154,21 +155,21 @@ class TitleBar(QFrame):
         for button, name, base_size in self._profile_actions:
             button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
             size = round(base_size + 2 * scale)
-            button.setIcon(icon(name, size=size))
+            set_icon(button, name, size=size)
             button.setIconSize(QSize(size, size))
 
     def _control(self, name: str, tooltip: str) -> QPushButton:
         button = QPushButton()
         button.setObjectName("chromeButton")
         button.setFixedSize(34, 32)
-        button.setIcon(icon(name, "#c8d7e7", 17))
+        set_icon(button, name, size=17)
         button.setIconSize(QSize(17, 17))
         button.setToolTip(tooltip)
         return button
 
     def update_maximize_button(self) -> None:
         maximized = self.window.isMaximized()
-        self.maximize_button.setIcon(icon("minimize-2" if maximized else "square", "#c8d7e7", 17))
+        set_icon(self.maximize_button, "minimize-2" if maximized else "square", size=17)
         self.maximize_button.setToolTip("Restaurar" if maximized else "Maximizar")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -254,7 +255,7 @@ class MainWindow(QMainWindow):
             button = QPushButton(name)
             button.setObjectName("navigationButton")
             button.setCheckable(True)
-            button.setIcon(icon(symbol, MUTED, 18))
+            set_icon(button, symbol, size=18)
             button.setIconSize(QSize(18, 18))
             button.setAccessibleName(name)
             button.clicked.connect(lambda checked=False, target=index: self.pages.setCurrentIndex(target))
@@ -262,6 +263,11 @@ class MainWindow(QMainWindow):
             self.navigation_buttons.append(button)
             navigation.addWidget(button)
         navigation.addStretch()
+        self.theme_button = QPushButton()
+        self.theme_button.setObjectName("themeButton")
+        self.theme_button.setAccessibleName("Alternar entre tema claro e escuro")
+        self.theme_button.clicked.connect(self._toggle_theme)
+        navigation.addWidget(self.theme_button)
         workspace_row.addWidget(sidebar)
         workspace_row.addWidget(self.pages, 1)
         self.pages.currentChanged.connect(self._update_navigation)
@@ -275,10 +281,7 @@ class MainWindow(QMainWindow):
             if warnings:
                 QTimer.singleShot(0, lambda: self._show_profile_warnings(warnings))
         self.statusBar().setSizeGripEnabled(False)
-        self.author_link = QLabel(
-            'Feito por <a href="https://github.com/CaioMascarenhas" '
-            f'style="color: {ACCENT_LIGHT}; text-decoration: none;">Mascarenhas</a>'
-        )
+        self.author_link = QLabel()
         self.author_link.setObjectName("footerCredit")
         self.author_link.setOpenExternalLinks(True)
         self.author_link.setTextInteractionFlags(
@@ -292,13 +295,37 @@ class MainWindow(QMainWindow):
             self._setup_tray()
         self._cursor_tracker = _ResizeCursorTracker(self)
         QApplication.instance().installEventFilter(self._cursor_tracker)
+        self._theme_manager = theme_manager()
+        self._theme_manager.changed.connect(self._on_theme_changed)
+        if self._profiles_enabled:
+            self._theme_manager.apply(self._profile_store.data.get("theme", "dark"))
+        self._refresh_theme()
+
+    def _toggle_theme(self) -> None:
+        self._theme_manager.apply("light" if self._theme_manager.mode == "dark" else "dark")
+
+    def _on_theme_changed(self, mode: str) -> None:
+        if self._profiles_enabled and not self._exiting:
+            self._profile_store.data["theme"] = mode
+            self._schedule_save()
+
+    def _refresh_theme(self) -> None:
+        colors = current_palette()
+        self._update_navigation(self.pages.currentIndex())
+        self.author_link.setText(
+            'Feito por <a href="https://github.com/CaioMascarenhas" '
+            f'style="color: {colors["ACCENT_LIGHT"]}; text-decoration: none;">Mascarenhas</a>')
+        light = theme_manager().mode == "light"
+        self.theme_button.setText("Modo escuro" if light else "Modo claro")
+        self.theme_button.setToolTip("Ativar tema escuro" if light else "Ativar tema claro")
+        set_icon(self.theme_button, "moon" if light else "sun", size=18)
 
     def _update_navigation(self, index: int) -> None:
         for position, (button, symbol) in enumerate(zip(
                 self.navigation_buttons, ("monitor", "bell-ring", "heart"))):
             selected = position == index
             button.setChecked(selected)
-            button.setIcon(icon(symbol, ACCENT_LIGHT if selected else MUTED, 18))
+            set_icon(button, symbol, role="ACCENT_LIGHT" if selected else "ICON", size=18)
 
     def _refresh_profile_combo(self) -> None:
         combo = self._title_bar.profile_combo
@@ -444,13 +471,14 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Perfil '{name}' excluído. '{self._profile_store.active_name}' ativado.", 5000)
 
     def paintEvent(self, event) -> None:
+        colors = current_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         inset = 0 if self.isMaximized() else 6
         radius = 0 if self.isMaximized() else 17
         rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
-        painter.setPen(QPen(QColor(BORDER), 1))
-        painter.setBrush(QColor(BACKGROUND))
+        painter.setPen(QPen(QColor(colors["BORDER"]), 1))
+        painter.setBrush(QColor(colors["BACKGROUND"]))
         painter.drawRoundedRect(rect, radius, radius)
         super().paintEvent(event)
 

@@ -6,6 +6,8 @@ A revisão de legibilidade usa superfícies grafite neutras e azul suave nos con
 
 A janela inicial de 940 × 600 tem navegação lateral, perfil agrupado no cabeçalho, toolbars para origem e volume e estados vazios com uma única orientação. Cards adaptam as colunas à largura disponível, respeitam a altura do conteúdo e abreviam nomes longos com tooltip. Os diálogos seguem a mesma paleta, tipografia e espaçamento.
 
+O botão **Modo claro / Modo escuro** no fim da barra lateral alterna sem reiniciar timers ou recriar recortes. O tema claro usa fundo cinza suave, superfícies brancas e texto escuro, com ações azuis. A preferência é global e fica no campo opcional `theme` do arquivo local de perfis; configurações antigas continuam abrindo no tema escuro. Cores dos ícones e dos controles desenhados em Qt acompanham a troca, inclusive em diálogos que já estão abertos.
+
 As prévias abaixo foram renderizadas pelo próprio aplicativo no backend nativo do Windows. Os recortes usam dados fictícios, sem iniciar espelhos do jogo.
 
 ![Recortes com o design atual](images/ui-readable-recortes.png)
@@ -13,6 +15,14 @@ As prévias abaixo foram renderizadas pelo próprio aplicativo no backend nativo
 ![Alertas com o design atual](images/ui-readable-alertas.png)
 
 ![Configuração do temporizador](images/ui-readable-dialog.png)
+
+### Tema claro
+
+![Recortes no tema claro](images/ui-light-recortes.png)
+
+![Alertas no tema claro](images/ui-light-alertas.png)
+
+![Configuração do temporizador no tema claro](images/ui-light-dialog.png)
 
 Os testes incluem contraste de texto, navegação, limites de layout, títulos longos, largura fixa dos percentuais e interação dos sliders. A inspeção visual também inclui a escala de 150% do Windows.
 

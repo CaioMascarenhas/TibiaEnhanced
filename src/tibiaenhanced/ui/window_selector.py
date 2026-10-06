@@ -7,8 +7,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QLabel, QListView,
                                QStyleOptionComboBox, QStyleOptionViewItem,
                                QStylePainter)
 
-from .design import icon
-from .palette import MUTED
+from .design import set_icon
 
 
 class _WindowItemDelegate(QStyledItemDelegate):
@@ -37,7 +36,7 @@ class WindowSelector(QComboBox):
         self.setView(view)
         self._arrow = QLabel(self)
         self._arrow.setFixedSize(16, 16)
-        self._arrow.setPixmap(icon("chevron-down", MUTED, 16).pixmap(16, 16))
+        set_icon(self._arrow, "chevron-down", role="MUTED", size=16)
         self._arrow.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.currentIndexChanged.connect(self._update_tooltip)
 

@@ -9,9 +9,9 @@ from PySide6.QtGui import QActionGroup, QColor, QCloseEvent, QContextMenuEvent, 
 from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMessageBox, QPushButton, QVBoxLayout, QWidget, QWidgetAction)
 
-from .design import icon
+from .design import set_icon
 from .design import CompactSlider
-from .palette import SURFACE, TEXT
+from .palette import current_palette
 
 from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
@@ -113,7 +113,7 @@ class DwmRegionDialog(QDialog):
         outline = QPainterPath()
         outline.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 12, 12)
         self.setMask(QRegion(outline.toFillPolygon().toPolygon()))
-        self.setStyleSheet(f"QDialog#dwmRegionDialog {{ background: {SURFACE}; color: {TEXT}; }}")
+        self._refresh_theme()
         heading = QLabel("Novo recorte", self)
         heading.setObjectName("dialogTitle")
         heading.setGeometry(18, 12, self.width() - 66, 28)
@@ -121,7 +121,7 @@ class DwmRegionDialog(QDialog):
         close = QPushButton(self)
         close.setObjectName("iconButton")
         close.setGeometry(self.width() - 48, 12, 30, 30)
-        close.setIcon(icon("x", "#e9edf6", 15))
+        set_icon(close, "x", size=15)
         close.setToolTip("Fechar")
         close.setAccessibleName("Fechar")
         close.clicked.connect(self.reject)
@@ -189,6 +189,10 @@ class DwmRegionDialog(QDialog):
         self._ok.clicked.connect(self.accept)
         buttons.addWidget(self._ok)
         self.setCursor(Qt.CursorShape.CrossCursor)
+
+    def _refresh_theme(self) -> None:
+        colors = current_palette()
+        self.setStyleSheet(f"QDialog#dwmRegionDialog {{ background: {colors['SURFACE']}; color: {colors['TEXT']}; }}")
 
     @property
     def selection(self) -> QRect:
