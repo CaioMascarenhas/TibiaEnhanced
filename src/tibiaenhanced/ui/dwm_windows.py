@@ -9,8 +9,9 @@ from PySide6.QtGui import QActionGroup, QColor, QCloseEvent, QContextMenuEvent, 
 from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMessageBox, QPushButton, QVBoxLayout, QWidget, QWidgetAction)
 
-from .design import icon
+from .design import set_icon
 from .design import CompactSlider
+from .palette import current_palette
 
 from tibiaenhanced.models import NAME_MAX_LENGTH, Region
 from tibiaenhanced.services.dwm_mirror import DwmMirror
@@ -102,65 +103,77 @@ class DwmRegionDialog(QDialog):
         screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         available = screen.availableGeometry() if screen else QRect(0, 0, 1280, 800)
         max_width = max(300, min(1000, available.width() - 80))
-        max_height = max(180, min(650, available.height() - 250))
+        max_height = max(180, min(650, available.height() - 340))
         scale = min(1.0, max_width / area.width, max_height / area.height)
-        self._display = QRect(12, 46, max(100, round(area.width * scale)),
+        self._display = QRect(18, 76, max(100, round(area.width * scale)),
                               max(80, round(area.height * scale)))
         self.setWindowTitle("Novo recorte")
         self.setObjectName("dwmRegionDialog")
-        self.setFixedSize(self._display.width() + 24, self._display.bottom() + 188)
+        self.setFixedSize(self._display.width() + 36, self._display.bottom() + 230)
         outline = QPainterPath()
         outline.addRoundedRect(self.rect().adjusted(0, 0, -1, -1), 12, 12)
         self.setMask(QRegion(outline.toFillPolygon().toPolygon()))
-        self.setStyleSheet("QDialog#dwmRegionDialog { background: #292c40; color: #f1f3f8; }")
-        heading = QLabel("Arraste na imagem para marcar o recorte.", self)
-        heading.setGeometry(12, 4, self.width() - 58, 20)
+        self._refresh_theme()
+        heading = QLabel("Novo recorte", self)
+        heading.setObjectName("dialogTitle")
+        heading.setGeometry(18, 12, self.width() - 66, 28)
         heading.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         close = QPushButton(self)
         close.setObjectName("iconButton")
-        close.setGeometry(self.width() - 35, 5, 25, 25)
-        close.setIcon(icon("x", "#e9edf6", 15))
+        close.setGeometry(self.width() - 48, 12, 30, 30)
+        set_icon(close, "x", size=15)
         close.setToolTip("Fechar")
         close.setAccessibleName("Fechar")
         close.clicked.connect(self.reject)
         source = QLabel(f"Janela de origem: {source_title}", self)
         source.setObjectName("mutedText")
-        source.setGeometry(12, 25, self.width() - 24, 18)
+        source.setGeometry(18, 43, self.width() - 36, 22)
         source.setToolTip(source_title)
         source.setText(source.fontMetrics().elidedText(
             f"Janela de origem: {source_title}", Qt.TextElideMode.ElideRight, source.width()))
-        controls_y = self._display.bottom() + 8
-        zoom_label = QLabel("Zoom", self)
-        zoom_label.setGeometry(12, controls_y, 42, 28)
-        self.zoom_out = QPushButton("−", self)
-        self.zoom_out.setGeometry(57, controls_y, 28, 28)
+        controls = QWidget(self)
+        controls.setGeometry(18, self._display.bottom() + 12, self.width() - 36, 204)
+        controls_layout = QVBoxLayout(controls)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(10)
+        zoom_row = QHBoxLayout()
+        zoom_row.setSpacing(8)
+        zoom_row.addWidget(QLabel("Zoom"))
+        self.zoom_out = QPushButton("−")
+        self.zoom_out.setFixedSize(34, 34)
+        zoom_row.addWidget(self.zoom_out)
         self.zoom_out.setToolTip("Reduzir zoom")
         self.zoom_out.clicked.connect(lambda: self._set_zoom(self._zoom / 1.25))
-        self.zoom_value = QLabel("100%", self)
+        self.zoom_value = QLabel("100%")
         self.zoom_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.zoom_value.setGeometry(89, controls_y, 53, 28)
+        self.zoom_value.setFixedWidth(48)
+        zoom_row.addWidget(self.zoom_value)
         self.zoom_value.setToolTip("Use Ctrl + roda do mouse para ampliar; botão do meio para mover")
-        self.zoom_in = QPushButton("+", self)
-        self.zoom_in.setGeometry(146, controls_y, 28, 28)
+        self.zoom_in = QPushButton("+")
+        self.zoom_in.setFixedSize(34, 34)
+        zoom_row.addWidget(self.zoom_in)
         self.zoom_in.setToolTip("Ampliar zoom")
         self.zoom_in.clicked.connect(lambda: self._set_zoom(self._zoom * 1.25))
         self.zoom_out.setEnabled(False)
-        pan_hint = QLabel("Meio: mover", self)
+        zoom_row.addStretch()
+        pan_hint = QLabel("Arraste para selecionar · meio para mover")
         pan_hint.setObjectName("mutedText")
-        pan_hint.setGeometry(181, controls_y, self.width() - 193, 28)
+        pan_hint.setWordWrap(True)
+        zoom_row.addWidget(pan_hint, 1)
         pan_hint.setToolTip("Use a roda do mouse para zoom e arraste com o botão do meio para mover a imagem")
-        self._coordinates = QLabel("Nenhuma área selecionada", self)
-        self._coordinates.setGeometry(12, self._display.bottom() + 44, self.width() - 24, 25)
-        name_label = QLabel(f"Nome do recorte (até {NAME_MAX_LENGTH} caracteres)", self)
-        name_label.setGeometry(12, self._display.bottom() + 75, self.width() - 24, 20)
-        self.name_input = QLineEdit(self)
+        controls_layout.addLayout(zoom_row)
+        self._coordinates = QLabel("Nenhuma área selecionada")
+        self._coordinates.setObjectName("mutedText")
+        controls_layout.addWidget(self._coordinates)
+        name_label = QLabel(f"Nome do recorte (até {NAME_MAX_LENGTH} caracteres)")
+        controls_layout.addWidget(name_label)
+        self.name_input = QLineEdit()
         self.name_input.setMaxLength(NAME_MAX_LENGTH)
         self.name_input.setText(suggested_name)
-        self.name_input.setGeometry(12, self._display.bottom() + 97,
-                                    self.width() - 24, 32)
+        controls_layout.addWidget(self.name_input)
         self.name_input.textChanged.connect(self._update_ok_state)
-        actions = QWidget(self)
-        actions.setGeometry(12, self._display.bottom() + 140, self.width() - 24, 36)
+        actions = QWidget()
+        controls_layout.addWidget(actions)
         buttons = QHBoxLayout(actions)
         buttons.setContentsMargins(0, 0, 0, 0)
         buttons.setSpacing(8)
@@ -176,6 +189,10 @@ class DwmRegionDialog(QDialog):
         self._ok.clicked.connect(self.accept)
         buttons.addWidget(self._ok)
         self.setCursor(Qt.CursorShape.CrossCursor)
+
+    def _refresh_theme(self) -> None:
+        colors = current_palette()
+        self.setStyleSheet(f"QDialog#dwmRegionDialog {{ background: {colors['SURFACE']}; color: {colors['TEXT']}; }}")
 
     @property
     def selection(self) -> QRect:
@@ -279,7 +296,7 @@ class DwmRegionDialog(QDialog):
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
             return
-        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 25:
+        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < self._display.top():
             handle = self.windowHandle()
             if handle is None or not handle.startSystemMove():
                 self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()

@@ -7,7 +7,7 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
-from PySide6.QtWidgets import QApplication, QTabWidget  # noqa: E402
+from PySide6.QtWidgets import QApplication, QStackedWidget  # noqa: E402
 
 from tibiaenhanced.services.capture import CaptureService  # noqa: E402
 from tibiaenhanced.ui.main_window import MainWindow  # noqa: E402
@@ -31,10 +31,14 @@ class AppShellTests(unittest.TestCase):
         window = MainWindow()
         window.show()
         self.assertTrue(window.isVisible())
-        tabs = window.centralWidget()
-        self.assertIsInstance(tabs, QTabWidget)
-        self.assertEqual([tabs.tabText(i) for i in range(tabs.count())],
-                         ["Recortes", "Alertas", "Donate"])
+        self.assertIsInstance(window.pages, QStackedWidget)
+        self.assertEqual([button.text() for button in window.navigation_buttons],
+                         ["Recortes", "Alertas", "Apoiar"])
+        for index, page in enumerate((window.capture_panel, window.audio_panel, window.donate_panel)):
+            window.navigation_buttons[index].click()
+            self.assertIs(window.pages.currentWidget(), page)
+            self.assertTrue(window.navigation_buttons[index].isChecked())
+            self.assertEqual(sum(button.isChecked() for button in window.navigation_buttons), 1)
         window.exit_app()
 
     def test_capture_worker_keeps_event_loop_responsive(self) -> None:

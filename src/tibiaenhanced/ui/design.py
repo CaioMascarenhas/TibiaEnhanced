@@ -10,38 +10,47 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QCheckBox, QFrame, QGraphicsDropShadowEffect,
                                QPushButton, QSlider, QStyle, QStyleOptionSlider)
 
-from .palette import ACCENT, ACCENT_HOVER, MUTED, TEXT, TRACK
+from .palette import current_palette
 
 
 ASSETS = Path(__file__).resolve().parents[1]
-HEADING_FAMILY = "Space Grotesk"
-BODY_FAMILY = "DM Sans"
+HEADING_FAMILY = "Segoe UI"
+BODY_FAMILY = "Segoe UI"
+_loaded_family = None
 
 
 def load_fonts() -> tuple[str, str]:
-    """Registra as fontes distribuídas com o aplicativo."""
-    global HEADING_FAMILY, BODY_FAMILY
-    for filename, heading in (
-        ("SpaceGrotesk[wght].ttf", True),
-        ("DMSans[opsz,wght].ttf", False),
-    ):
-        font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / filename))
-        families = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
-        if heading:
-            HEADING_FAMILY = families[0] if families else "Segoe UI"
-        else:
-            BODY_FAMILY = families[0] if families else "Segoe UI"
+    """Usa Segoe UI do Windows, com fallback local e registro único."""
+    global HEADING_FAMILY, BODY_FAMILY, _loaded_family
+    if _loaded_family is None:
+        _loaded_family = "Segoe UI"
+        if _loaded_family not in QFontDatabase.families():
+            font_id = QFontDatabase.addApplicationFont(str(ASSETS / "fonts" / "DMSans[opsz,wght].ttf"))
+            bundled = QFontDatabase.applicationFontFamilies(font_id) if font_id >= 0 else []
+            _loaded_family = bundled[0] if bundled else QFontDatabase.systemFont(
+                QFontDatabase.SystemFont.GeneralFont).family()
+    HEADING_FAMILY = BODY_FAMILY = _loaded_family
     return HEADING_FAMILY, BODY_FAMILY
 
 
-def heading_font(size: int) -> QFont:
-    font = QFont(HEADING_FAMILY, size)
-    font.setWeight(QFont.Weight.Bold)
+def ui_font(size: int = 10, *, heading: bool = False) -> QFont:
+    font = QFont(HEADING_FAMILY if heading else BODY_FAMILY, size)
+    font.setWeight(QFont.Weight.DemiBold if heading else QFont.Weight.Normal)
+    # Respeita a suavização e o hinting do sistema, inclusive ClearType no Windows.
+    font.setStyleStrategy(QFont.StyleStrategy.PreferDefault)
     return font
 
 
-@lru_cache(maxsize=128)
-def icon(name: str, color: str = "#B8C9DE", size: int = 20) -> QIcon:
+def heading_font(size: int) -> QFont:
+    return ui_font(size, heading=True)
+
+
+def icon(name: str, color: str | None = None, size: int = 20) -> QIcon:
+    return _render_icon(name, color or current_palette()["ICON"], size)
+
+
+@lru_cache(maxsize=256)
+def _render_icon(name: str, color: str, size: int) -> QIcon:
     """Renderiza um SVG Lucide com cor fixa para os controles Qt."""
     source = (ASSETS / "icons" / f"{name}.svg").read_text(encoding="utf-8")
     source = source.replace('stroke="currentColor"', f'stroke="{color}"')
@@ -53,6 +62,25 @@ def icon(name: str, color: str = "#B8C9DE", size: int = 20) -> QIcon:
     painter.end()
     pixmap.setDevicePixelRatio(2)
     return QIcon(pixmap)
+
+
+def set_icon(widget, name: str, *, role: str = "ICON", size: int = 20) -> None:
+    """Guarda o papel da cor para atualizar o ícone ao alternar o tema."""
+    widget._theme_icon = (name, role, size)
+    refresh_icon(widget)
+
+
+def refresh_icon(widget) -> None:
+    specification = getattr(widget, "_theme_icon", None)
+    if specification is None:
+        return
+    name, role, size = specification
+    rendered = icon(name, current_palette()[role], size)
+    if hasattr(widget, "setIcon"):
+        widget.setIcon(rendered)
+        widget.setIconSize(QSize(size, size))
+    else:
+        widget.setPixmap(rendered.pixmap(size, size))
 
 
 @lru_cache(maxsize=16)
@@ -100,7 +128,7 @@ class HoverEffects(QObject):
                 effect = QGraphicsDropShadowEffect(watched)
                 effect.setBlurRadius(2)
                 effect.setOffset(0, 0)
-                effect.setColor(QColor(53, 191, 169, 0))
+                effect.setColor(QColor(0, 0, 0, 0))
                 watched.setGraphicsEffect(effect)
                 animation = QVariantAnimation(watched)
                 animation.setDuration(170)
@@ -123,7 +151,7 @@ class HoverEffects(QObject):
     def _draw_shadow(effect: QGraphicsDropShadowEffect, progress: float) -> None:
         effect.setBlurRadius(2 + 18 * progress)
         effect.setOffset(0, 2 * progress)
-        effect.setColor(QColor(53, 191, 169, round(72 * progress)))
+        effect.setColor(QColor(0, 0, 0, round(48 * progress)))
 
     def _animate(self, watched, target: float) -> None:
         animation = self._animations[watched]
@@ -137,9 +165,9 @@ class HoverEffects(QObject):
 class CompactSlider(QSlider):
     """Trilho arredondado, mantendo teclado, arraste e acessibilidade do Qt."""
 
-    def __init__(self, orientation, parent=None, *, accent: str = ACCENT) -> None:
+    def __init__(self, orientation, parent=None, *, accent: str | None = None) -> None:
         super().__init__(orientation, parent)
-        self.accent = accent
+        self._custom_accent = accent
         self._drag_offset = None
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
         self._hover = 0.0
@@ -147,6 +175,10 @@ class CompactSlider(QSlider):
         self._hover_animation.setDuration(140)
         self._hover_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._hover_animation.valueChanged.connect(self._set_hover)
+
+    @property
+    def accent(self) -> str:
+        return self._custom_accent or current_palette()["ACCENT"]
 
     def _set_hover(self, value: float) -> None:
         self._hover = float(value)
@@ -225,6 +257,7 @@ class CompactSlider(QSlider):
         event.accept()
 
     def paintEvent(self, event) -> None:
+        colors = current_palette()
         start, end, position, upside_down = self._track_geometry()
         horizontal = self.orientation() == Qt.Orientation.Horizontal
         def point(coordinate):
@@ -232,9 +265,9 @@ class CompactSlider(QSlider):
                     else QPointF(self.width() / 2, coordinate))
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(QColor(TRACK), 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.setPen(QPen(QColor(colors["TRACK"]), 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         painter.drawLine(point(start), point(end))
-        accent = QColor(self.accent if self.isEnabled() else "#666979")
+        accent = QColor(self.accent if self.isEnabled() else colors["DISABLED_TEXT"])
         if self.isEnabled():
             accent = accent.lighter(round(100 + 14 * self._hover))
         painter.setPen(QPen(accent, 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
@@ -282,6 +315,9 @@ class ToggleCheckBox(QCheckBox):
     def sizeHint(self) -> QSize:
         return QSize(46 + self.fontMetrics().horizontalAdvance(self.text()), 26)
 
+    def hitButton(self, position) -> bool:
+        return self.rect().contains(position)
+
     def enterEvent(self, event) -> None:
         super().enterEvent(event)
         self.update()
@@ -301,17 +337,20 @@ class ToggleCheckBox(QCheckBox):
         self.update()
 
     def paintEvent(self, event) -> None:
+        colors = current_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         track = QRectF(3, (self.height() - 20) / 2, 36, 20)
         painter.setPen(Qt.PenStyle.NoPen)
         if self.isEnabled() and (self.underMouse() or self.hasFocus()):
-            painter.setBrush(QColor(53, 191, 169, 45 if self.hasFocus() else 25))
+            halo = QColor(colors["ACCENT"])
+            halo.setAlpha(45 if self.hasFocus() else 25)
+            painter.setBrush(halo)
             painter.drawRoundedRect(track.adjusted(-3, -3, 3, 3), 13, 13)
-        painter.setBrush(QColor(TRACK if self.isEnabled() else "#354044"))
+        painter.setBrush(QColor(colors["TRACK"] if self.isEnabled() else colors["DISABLED_TRACK"]))
         painter.drawRoundedRect(track, 10, 10)
         if self._position:
-            active = QColor(ACCENT_HOVER if self.underMouse() else ACCENT)
+            active = QColor(colors["ACCENT_HOVER"] if self.underMouse() else colors["ACCENT"])
             active.setAlpha(round(255 * self._position) if self.isEnabled() else 60)
             painter.setBrush(active)
             painter.drawRoundedRect(track, 10, 10)
@@ -319,9 +358,9 @@ class ToggleCheckBox(QCheckBox):
         radius = 6.4 if self._pressed else 7.2
         painter.setBrush(QColor(0, 0, 0, 50))
         painter.drawEllipse(QPointF(cx + 0.5, self.height() / 2 + 1.2), radius, radius)
-        painter.setBrush(QColor(TEXT if self.isEnabled() else "#899a98"))
+        painter.setBrush(QColor(colors["SWITCH_THUMB"] if self.isEnabled() else colors["DISABLED_TEXT"]))
         painter.drawEllipse(QPointF(cx, self.height() / 2), radius, radius)
-        painter.setPen(QColor(MUTED if self.isEnabled() else "#899a98"))
+        painter.setPen(QColor(colors["MUTED"] if self.isEnabled() else colors["DISABLED_TEXT"]))
         painter.setFont(self.font())
         painter.drawText(QRectF(46, 0, self.width() - 46, self.height()),
                          Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())

@@ -32,6 +32,7 @@ class ProfileStore:
         self.data = {
             "schema_version": SCHEMA_VERSION,
             "active_profile": DEFAULT_PROFILE,
+            "theme": "dark",
             "profiles": {DEFAULT_PROFILE: empty_profile()},
         }
 
@@ -69,6 +70,7 @@ class ProfileStore:
             self.data = {
                 "schema_version": SCHEMA_VERSION,
                 "active_profile": active,
+                "theme": raw.get("theme") if raw.get("theme") in ("light", "dark") else "dark",
                 "profiles": valid,
             }
             if len(valid) != len(profiles):

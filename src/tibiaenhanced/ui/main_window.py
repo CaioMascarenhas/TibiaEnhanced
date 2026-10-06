@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QEnterEvent, QIcon, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -19,18 +20,20 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSystemTrayIcon,
-    QTabWidget,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from .design import heading_font, icon, medieval_cursor
+from .design import ToggleCheckBox, heading_font, medieval_cursor, set_icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .donate_panel import DonatePanel
-from .palette import ACCENT_LIGHT, BACKGROUND, BORDER
+from .palette import current_palette
+from .theme_manager import theme_manager
 from .dialog_shell import StyledDialog
 from ..services.profiles import ProfileStore
+from ..services.window_frame import request_rounded_corners
 from ..models import NAME_MAX_LENGTH
 from .window_selector import WindowSelector
 
@@ -58,17 +61,17 @@ class TitleBar(QFrame):
         self.window = window
         self._drag_origin: QPoint | None = None
         self.setObjectName("titleBar")
-        self.setFixedHeight(44)
+        self.setFixedHeight(60)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(15, 5, 11, 5)
+        layout.setContentsMargins(17, 7, 12, 7)
         layout.setSpacing(0)
 
         emblem = QLabel()
         emblem.setObjectName("brandIcon")
-        emblem.setFixedSize(30, 30)
+        emblem.setFixedSize(34, 34)
         emblem.setAlignment(Qt.AlignmentFlag.AlignCenter)
         emblem.setPixmap(QPixmap(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png"))
-                         .scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
+                         .scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
                                  Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(emblem)
         layout.addSpacing(9)
@@ -76,25 +79,25 @@ class TitleBar(QFrame):
         brand.setSpacing(0)
         title = QLabel("Tibia Enhanced")
         title.setObjectName("brandTitle")
-        title.setFont(heading_font(16))
+        title.setFont(heading_font(12))
         brand.addWidget(title)
         layout.addLayout(brand)
         layout.addStretch()
 
         self.profile_controls = QFrame()
         self.profile_controls.setObjectName("profileControls")
-        self.profile_controls.setFixedHeight(32)
-        self._profile_scale = -1.0
+        self.profile_controls.setFixedHeight(36)
+        self._profile_sizes = None
         profile_row = QHBoxLayout(self.profile_controls)
         profile_row.setContentsMargins(7, 2, 4, 2)
         profile_row.setSpacing(3)
         profile_label = QLabel("Perfil")
         profile_label.setObjectName("profileLabel")
-        profile_label.setFixedWidth(30)
+        profile_label.setMinimumWidth(34)
         profile_row.addWidget(profile_label)
         self.profile_combo = WindowSelector()
         self.profile_combo.setObjectName("profileSelector")
-        self.profile_combo.setFixedWidth(115)
+        self.profile_combo.setFixedWidth(145)
         self.profile_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.profile_combo.setToolTip("Perfil local de recortes e alertas")
         self.profile_combo.currentTextChanged.connect(window._switch_profile)
@@ -106,7 +109,7 @@ class TitleBar(QFrame):
         create_profile = QPushButton()
         create_profile.setObjectName("iconButton")
         create_profile.setFixedSize(24, 27)
-        create_profile.setIcon(icon("plus", size=16))
+        set_icon(create_profile, "plus", size=16)
         create_profile.setToolTip("Criar perfil")
         create_profile.setAccessibleName("Criar perfil")
         create_profile.clicked.connect(window._create_profile)
@@ -114,7 +117,7 @@ class TitleBar(QFrame):
         manage_profile = QPushButton()
         manage_profile.setObjectName("iconButton")
         manage_profile.setFixedSize(24, 27)
-        manage_profile.setIcon(icon("pencil", size=15))
+        set_icon(manage_profile, "pencil", size=15)
         manage_profile.setToolTip("Gerenciar perfil")
         manage_profile.setAccessibleName("Gerenciar perfil")
         self.profile_menu = QMenu(manage_profile)
@@ -144,32 +147,32 @@ class TitleBar(QFrame):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        # Preserve the compact opening size, then grow within a bounded range.
-        scale = min(1.0, max(0.0, (self.window.width() - 680) / 720))
-        if scale == self._profile_scale:
+        # Grow the profile name without crowding the brand or window controls.
+        scale = min(1.0, max(0.0, (self.window.width() - 800) / 800))
+        sizes = (round(145 + 125 * scale), round(24 + 6 * scale),
+                 round(27 + 4 * scale), round(2 * scale))
+        if sizes == self._profile_sizes:
             return
-        self._profile_scale = scale
-        self.profile_combo.setFixedWidth(round(115 + 165 * scale))
-        self.profile_controls.setFixedHeight(round(32 + 4 * scale))
-        self.setFixedHeight(round(44 + 4 * scale))
+        self._profile_sizes = sizes
+        self.profile_combo.setFixedWidth(sizes[0])
         for button, name, base_size in self._profile_actions:
-            button.setFixedSize(round(24 + 6 * scale), round(27 + 4 * scale))
-            size = round(base_size + 2 * scale)
-            button.setIcon(icon(name, size=size))
+            button.setFixedSize(sizes[1], sizes[2])
+            size = base_size + sizes[3]
+            set_icon(button, name, size=size)
             button.setIconSize(QSize(size, size))
 
     def _control(self, name: str, tooltip: str) -> QPushButton:
         button = QPushButton()
         button.setObjectName("chromeButton")
         button.setFixedSize(34, 32)
-        button.setIcon(icon(name, "#c8d7e7", 17))
+        set_icon(button, name, size=17)
         button.setIconSize(QSize(17, 17))
         button.setToolTip(tooltip)
         return button
 
     def update_maximize_button(self) -> None:
         maximized = self.window.isMaximized()
-        self.maximize_button.setIcon(icon("minimize-2" if maximized else "square", "#c8d7e7", 17))
+        set_icon(self.maximize_button, "minimize-2" if maximized else "square", size=17)
         self.maximize_button.setToolTip("Restaurar" if maximized else "Maximizar")
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -214,31 +217,77 @@ class MainWindow(QMainWindow):
         self._exiting = False
         self._tray: QSystemTrayIcon | None = None
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setContentsMargins(7, 7, 7, 7)
+        # A layered, per-pixel-alpha window can lose its backing store during
+        # native Windows resize. The shell is opaque; DWM clips its corners.
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
+        self._native_corner_handle = None
+        self._native_corners = False
+        self.setContentsMargins(1, 1, 1, 1)
         self.setMouseTracking(True)
         self.setWindowTitle("Tibia Enhanced")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "imgs" / "iconapp_no_bg.png")))
-        self.resize(680, 460)
-        self.setMinimumSize(560, 380)
+        self.resize(940, 600)
+        self.setMinimumSize(800, 500)
         self._title_bar = TitleBar(self)
         self.setMenuWidget(self._title_bar)
 
-        tabs = QTabWidget()
-        tabs.tabBar().setIconSize(QSize(16, 16))
+        workspace = QWidget()
+        workspace.setObjectName("appWorkspace")
+        workspace_row = QHBoxLayout(workspace)
+        workspace_row.setContentsMargins(0, 0, 0, 0)
+        workspace_row.setSpacing(0)
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(164)
+        navigation = QVBoxLayout(sidebar)
+        navigation.setContentsMargins(10, 21, 10, 18)
+        navigation.setSpacing(6)
+        navigation_label = QLabel("FERRAMENTAS")
+        navigation_label.setObjectName("navigationLabel")
+        navigation.addWidget(navigation_label)
+        navigation.addSpacing(5)
+        self.pages = QStackedWidget()
+        self.pages.setObjectName("pages")
         self.capture_panel = CapturePanel()
-        tabs.addTab(self.capture_panel,
-                    icon("monitor", "#d5e6f5", 16),
-                    "Recortes")
         self.audio_panel = AudioPanel()
-        tabs.addTab(
-            self.audio_panel,
-            icon("bell-ring", "#d5e6f5", 16),
-            "Alertas",
-        )
         self.donate_panel = DonatePanel()
-        tabs.addTab(self.donate_panel, icon("heart", "#d5e6f5", 16), "Donate")
-        self.setCentralWidget(tabs)
+        self.navigation_buttons = []
+        self._navigation_group = QButtonGroup(self)
+        for index, (page, name, symbol) in enumerate((
+            (self.capture_panel, "Recortes", "monitor"),
+            (self.audio_panel, "Alertas", "bell-ring"),
+            (self.donate_panel, "Apoiar", "heart"),
+        )):
+            self.pages.addWidget(page)
+            button = QPushButton(name)
+            button.setObjectName("navigationButton")
+            button.setCheckable(True)
+            set_icon(button, symbol, size=18)
+            button.setIconSize(QSize(18, 18))
+            button.setAccessibleName(name)
+            button.clicked.connect(lambda checked=False, target=index: self.pages.setCurrentIndex(target))
+            self._navigation_group.addButton(button, index)
+            self.navigation_buttons.append(button)
+            navigation.addWidget(button)
+        navigation.addStretch()
+        appearance = QFrame()
+        appearance.setObjectName("appearanceControls")
+        appearance_layout = QVBoxLayout(appearance)
+        appearance_layout.setContentsMargins(10, 12, 4, 0)
+        appearance_layout.setSpacing(8)
+        appearance_label = QLabel("APARÊNCIA")
+        appearance_label.setObjectName("appearanceLabel")
+        appearance_layout.addWidget(appearance_label)
+        self.theme_switch = ToggleCheckBox("Modo escuro")
+        self.theme_switch.setAccessibleName("Modo escuro")
+        self.theme_switch.toggled.connect(self._set_dark_theme)
+        appearance_layout.addWidget(self.theme_switch)
+        navigation.addWidget(appearance)
+        workspace_row.addWidget(sidebar)
+        workspace_row.addWidget(self.pages, 1)
+        self.pages.currentChanged.connect(self._update_navigation)
+        self._update_navigation(0)
+        self.setCentralWidget(workspace)
         self.capture_panel.changed.connect(self._schedule_save)
         self.audio_panel.changed.connect(self._schedule_save)
         self._refresh_profile_combo()
@@ -247,10 +296,7 @@ class MainWindow(QMainWindow):
             if warnings:
                 QTimer.singleShot(0, lambda: self._show_profile_warnings(warnings))
         self.statusBar().setSizeGripEnabled(False)
-        self.author_link = QLabel(
-            'Feito por <a href="https://github.com/CaioMascarenhas" '
-            f'style="color: {ACCENT_LIGHT}; text-decoration: none;">Mascarenhas</a>'
-        )
+        self.author_link = QLabel()
         self.author_link.setObjectName("footerCredit")
         self.author_link.setOpenExternalLinks(True)
         self.author_link.setTextInteractionFlags(
@@ -264,6 +310,40 @@ class MainWindow(QMainWindow):
             self._setup_tray()
         self._cursor_tracker = _ResizeCursorTracker(self)
         QApplication.instance().installEventFilter(self._cursor_tracker)
+        self._theme_manager = theme_manager()
+        self._theme_manager.changed.connect(self._on_theme_changed)
+        if self._profiles_enabled:
+            self._theme_manager.apply(self._profile_store.data.get("theme", "dark"))
+        self._refresh_theme()
+
+    def _set_dark_theme(self, checked: bool) -> None:
+        self._theme_manager.apply("dark" if checked else "light")
+
+    def _on_theme_changed(self, mode: str) -> None:
+        if self._profiles_enabled and not self._exiting:
+            self._profile_store.data["theme"] = mode
+            self._schedule_save()
+
+    def _refresh_theme(self) -> None:
+        colors = current_palette()
+        self._update_navigation(self.pages.currentIndex())
+        self.author_link.setText(
+            'Feito por <a href="https://github.com/CaioMascarenhas" '
+            f'style="color: {colors["ACCENT_LIGHT"]}; text-decoration: none;">Mascarenhas</a>')
+        light = theme_manager().mode == "light"
+        if self.theme_switch.isChecked() == light:
+            self.theme_switch.blockSignals(True)
+            self.theme_switch.setChecked(not light)
+            self.theme_switch.blockSignals(False)
+            self.theme_switch._animate_to_state(not light)
+        self.theme_switch.setToolTip("Ativar tema escuro" if light else "Ativar tema claro")
+
+    def _update_navigation(self, index: int) -> None:
+        for position, (button, symbol) in enumerate(zip(
+                self.navigation_buttons, ("monitor", "bell-ring", "heart"))):
+            selected = position == index
+            button.setChecked(selected)
+            set_icon(button, symbol, role="ACCENT_LIGHT" if selected else "ICON", size=18)
 
     def _refresh_profile_combo(self) -> None:
         combo = self._title_bar.profile_combo
@@ -409,15 +489,42 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Perfil '{name}' excluído. '{self._profile_store.active_name}' ativado.", 5000)
 
     def paintEvent(self, event) -> None:
+        colors = current_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        inset = 0 if self.isMaximized() else 6
-        radius = 0 if self.isMaximized() else 17
-        rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
-        painter.setPen(QPen(QColor(BORDER), 1))
-        painter.setBrush(QColor(BACKGROUND))
+        painter.fillRect(self.rect(), QColor(colors["BACKGROUND"]))
+        radius = 0 if self.isMaximized() else 12
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        painter.setPen(QPen(QColor(colors["BORDER"]), 1))
+        painter.setBrush(QColor(colors["BACKGROUND"]))
         painter.drawRoundedRect(rect, radius, radius)
         super().paintEvent(event)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if QApplication.instance().platformName() == "windows":
+            handle = int(self.winId())
+            if handle != self._native_corner_handle:
+                self._native_corner_handle = handle
+                self._native_corners = request_rounded_corners(handle)
+            self._update_window_shape()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_window_shape()
+
+    def _update_window_shape(self) -> None:
+        if QApplication.instance().platformName() != "windows":
+            return
+        if self.isMaximized() or self._native_corners:
+            if not self.mask().isEmpty():
+                self.clearMask()
+        else:
+            # Windows 10 fallback: a binary clipping region still keeps the
+            # window opaque and avoids layered-window uploads while resizing.
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(self.rect()), 12, 12)
+            self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
     def _resize_edges(self, point: QPoint) -> Qt.Edges:
         if self.isMaximized():
@@ -470,8 +577,9 @@ class MainWindow(QMainWindow):
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.WindowStateChange:
             self.setCursor(medieval_cursor(ratio=self.devicePixelRatioF()))
-            inset = 0 if self.isMaximized() else 7
+            inset = 0 if self.isMaximized() else 1
             self.setContentsMargins(inset, inset, inset, inset)
+            self._update_window_shape()
             if hasattr(self, "_title_bar"):
                 self._title_bar.update_maximize_button()
             self.update()

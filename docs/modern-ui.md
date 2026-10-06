@@ -1,4 +1,34 @@
-# Redesign visual da issue #9
+# Design e legibilidade
+
+## Interface atual
+
+A revisão de legibilidade usa superfícies grafite neutras e azul suave nos controles. A fonte Segoe UI recebe a renderização padrão do Windows, com fallback para DM Sans, distribuída localmente com sua licença OFL; o aplicativo não força FreeType nem desativa a suavização subpixel. Texto principal de 14 px, apoio de 13 px com peso 500 e títulos de página de 24 px distinguem conteúdo e ações. Os textos auxiliares do tema escuro usam uma cor mais clara para facilitar a leitura.
+
+A janela inicial de 940 × 600 tem navegação lateral, perfil agrupado no cabeçalho, toolbars para origem e volume e estados vazios com uma única orientação. Cards adaptam as colunas à largura disponível, respeitam a altura do conteúdo e abreviam nomes longos com tooltip. Os diálogos seguem a mesma paleta, tipografia e espaçamento.
+
+O switch **Modo escuro**, na seção **Aparência** no fim da barra lateral, alterna sem reiniciar timers ou recriar recortes. Ligado usa o escuro; desligado usa o claro. O tema claro usa fundo cinza suave, superfícies brancas e texto escuro, com ações azuis. A preferência é global e fica no campo opcional `theme` do arquivo local de perfis; configurações antigas continuam abrindo no tema escuro. Cores dos ícones e dos controles desenhados em Qt acompanham a troca, inclusive em diálogos que já estão abertos.
+
+A janela principal usa uma superfície opaca e pede cantos arredondados ao [DWM do Windows 11](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners); no Windows 10 há recorte por região. Isso dispensa uploads de transparência por pixel durante o redimensionamento. As grades só reposicionam os cards ao mudar as colunas ou a coleção, reservando espaço para a barra de rolagem para evitar oscilações nos limites de largura.
+
+As prévias abaixo foram renderizadas pelo próprio aplicativo no backend nativo do Windows. Os recortes usam dados fictícios, sem iniciar espelhos do jogo.
+
+![Recortes com o design atual](images/ui-readable-recortes.png)
+
+![Alertas com o design atual](images/ui-readable-alertas.png)
+
+![Configuração do temporizador](images/ui-readable-dialog.png)
+
+### Tema claro
+
+![Recortes no tema claro](images/ui-light-recortes.png)
+
+![Alertas no tema claro](images/ui-light-alertas.png)
+
+![Configuração do temporizador no tema claro](images/ui-light-dialog.png)
+
+Os testes incluem contraste de texto, navegação, limites de layout, títulos longos, largura fixa dos percentuais e interação dos sliders. A inspeção visual também inclui a escala de 150% do Windows.
+
+## Histórico da issue #9
 
 Interface PySide6 com fundo grafite, cards neutros, destaque em verde água e controles compactos. A janela abre em 680 × 460 e pode ser reduzida a 560 × 380, com rolagem do conteúdo. A versão azul anterior permanece nas capturas para comparação.
 
