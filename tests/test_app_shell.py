@@ -33,8 +33,8 @@ class AppShellTests(unittest.TestCase):
         self.assertTrue(window.isVisible())
         self.assertIsInstance(window.pages, QStackedWidget)
         self.assertEqual([button.text() for button in window.navigation_buttons],
-                         ["Recortes", "Alertas", "Apoiar"])
-        for index, page in enumerate((window.capture_panel, window.audio_panel, window.donate_panel)):
+                         ["Recortes", "Alertas", "Tools", "Apoiar"])
+        for index, page in enumerate((window.capture_panel, window.audio_panel, window.tools_panel, window.donate_panel)):
             window.navigation_buttons[index].click()
             self.assertIs(window.pages.currentWidget(), page)
             self.assertTrue(window.navigation_buttons[index].isChecked())

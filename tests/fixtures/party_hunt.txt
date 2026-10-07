@@ -1,0 +1,24 @@
+Session data: From 2026-01-10, 20:27:25 to 2026-01-10, 21:20:31
+Session: 00:53h
+Loot Type: Market
+Loot: 2,838,314
+Supplies: 1,003,049
+Balance: 1,835,265
+Albus Cruciatus
+    Loot: 1,069,019
+    Supplies: 129,889
+    Balance: 939,130
+    Damage: 2,678,694
+    Healing: 852,699
+Blackfang
+    Loot: 1,126,673
+    Supplies: 375,904
+    Balance: 750,769
+    Damage: 4,884,260
+    Healing: 1,062,111
+Kandin (Leader)
+    Loot: 642,622
+    Supplies: 497,256
+    Balance: 145,366
+    Damage: 5,844,944
+    Healing: 1,338,803

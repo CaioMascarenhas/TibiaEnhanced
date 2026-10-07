@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Recortes ao vivo e alertas locais para Tibia"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["PySide6>=6.7,<7", "mss>=10,<11"]
+dependencies = ["PySide6>=6.7,<7", "mss>=10,<11", "tzdata>=2025.2"]
 
 [project.optional-dependencies]
 diagnostics = ["windows-capture==2.0.1"]
@@ -20,4 +20,4 @@ tibiaenhanced = "tibiaenhanced.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-tibiaenhanced = ["audios/*.mp3", "audios/*.wav", "imgs/**/*.png", "imgs/*.png", "fonts/*.ttf", "fonts/*.txt", "icons/*.svg", "icons/LICENSE"]
+tibiaenhanced = ["audios/*.mp3", "audios/*.wav", "imgs/**/*.png", "imgs/*.png", "imgs/*.gif", "imgs/*.txt", "fonts/*.ttf", "fonts/*.txt", "icons/*.svg", "icons/LICENSE"]

@@ -40,6 +40,20 @@ def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe U
     QPushButton#navigationButton:hover {{ color: {TEXT}; background: {SURFACE_HOVER}; }}
     QPushButton#navigationButton:checked {{ color: {TEXT}; background: {SELECTED}; border-color: {SELECTED_BORDER}; }}
     QPushButton#navigationButton:focus {{ border-color: {ACCENT}; }}
+    QPushButton#toolTab {{ color: {MUTED}; background: transparent; border-color: {BORDER}; }}
+    QPushButton#toolTab:checked {{ color: {TEXT}; background: {SELECTED}; border-color: {SELECTED_BORDER}; }}
+    QPushButton#rashidLink {{ color: {MUTED}; background: transparent; font-weight: 400;
+        border: 1px solid transparent; padding: 4px 6px; }}
+    QPushButton#rashidLink:hover {{ color: {TEXT}; background: {SURFACE_HOVER}; border-color: transparent; }}
+    QPushButton#rashidLink:focus {{ border-color: {ACCENT}; }}
+    QLabel#toolNumber {{ color: {TEXT}; font-size: 23px; font-weight: 600; }}
+    QLabel#shareRange {{ color: {ACCENT_LIGHT}; font-size: 32px; font-weight: 600; }}
+    QLabel#transferTitle {{ color: {TEXT}; font-size: 14px; font-weight: 600; }}
+    QLabel#toolError {{ color: {DANGER_TEXT}; background: {DANGER_BACKGROUND};
+        border: 1px solid {DANGER_BORDER}; border-radius: 8px; padding: 10px; }}
+    QPlainTextEdit#huntLog {{ color: {TEXT}; background: {INPUT}; border: 1px solid {BORDER};
+        border-radius: 8px; padding: 10px; selection-background-color: {PRIMARY}; selection-color: {PRIMARY_TEXT}; }}
+    QPlainTextEdit#huntLog:focus {{ border-color: {ACCENT}; }}
     QFrame#profileControls {{ background: {INPUT}; border: 1px solid {BORDER}; border-radius: 8px; }}
     QLabel#profileLabel {{ color: {MUTED}; font-size: 12px; }}
     QFrame#profileDivider {{ background: {BORDER}; border: 0; }}
@@ -89,7 +103,7 @@ def app_stylesheet(heading_family: str = "Segoe UI", body_family: str = "Segoe U
     QCheckBox::indicator {{ width: 16px; height: 16px; background: {INPUT}; border: 1px solid {HOVER_BORDER}; border-radius: 4px; }}
     QCheckBox::indicator:hover {{ border-color: {ACCENT}; }}
     QCheckBox::indicator:checked {{ background: {PRIMARY}; border-color: {ACCENT}; }}
-    QCheckBox#loopSwitch::indicator {{ width: 0; height: 0; border: 0; background: transparent; }}
+    QCheckBox#loopSwitch::indicator, QCheckBox#themeSwitch::indicator {{ width: 0; height: 0; border: 0; background: transparent; }}
 
     QSlider {{ background: transparent; min-height: 22px; max-height: 22px; }}
     QSlider::groove:horizontal {{ height: 4px; background: {TRACK}; border: 0; border-radius: 2px; }}

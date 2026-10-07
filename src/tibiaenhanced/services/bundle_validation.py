@@ -181,7 +181,19 @@ def run_validation(report_file, screenshot_file=None, *, native=True):
             QApplication.processEvents()
             tabs = window.pages
             check("navigation", [button.text() for button in window.navigation_buttons]
-                  == ["Recortes", "Alertas", "Apoiar"] and tabs.count() == 3)
+                  == ["Recortes", "Alertas", "Tools", "Apoiar"] and tabs.count() == 4)
+            tools = window.tools_panel
+            check("rashid_gif", tools.rashid_movie.isValid() and tools.rashid_movie.frameCount() > 1)
+            check("rashid_timezone", bool(tools._rashid_stop.city))
+            tools.exp_share.level_input.setValue(200)
+            check("exp_share", tools.exp_share.range_label.text() == "133 – 301")
+            tools.loot_split.log_input.setPlainText(
+                "Session: 01:00h\nLoot: 100\nSupplies: 20\nBalance: 80\n"
+                "Build One\nLoot: 100\nSupplies: 0\nBalance: 100\n"
+                "Build Two\nLoot: 0\nSupplies: 20\nBalance: -20")
+            tools.loot_split.calculate()
+            check("loot_split", tools.loot_split.result is not None
+                  and tools.loot_split.result.transfers[0].command == "transfer 60 to Build Two")
             check("app_icon", not window.windowIcon().isNull())
             window.audio_panel.cards[0].loop_check.setChecked(True)
             window._save_profile()

@@ -25,10 +25,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .design import ToggleCheckBox, heading_font, medieval_cursor, set_icon
+from .design import ThemeSwitch, heading_font, medieval_cursor, set_icon
 from .capture_panel import CapturePanel
 from .audio_panel import AudioPanel
 from .donate_panel import DonatePanel
+from .tools_panel import ToolsPanel
 from .palette import current_palette
 from .theme_manager import theme_manager
 from .dialog_shell import StyledDialog
@@ -250,12 +251,14 @@ class MainWindow(QMainWindow):
         self.pages.setObjectName("pages")
         self.capture_panel = CapturePanel()
         self.audio_panel = AudioPanel()
+        self.tools_panel = ToolsPanel()
         self.donate_panel = DonatePanel()
         self.navigation_buttons = []
         self._navigation_group = QButtonGroup(self)
         for index, (page, name, symbol) in enumerate((
             (self.capture_panel, "Recortes", "monitor"),
             (self.audio_panel, "Alertas", "bell-ring"),
+            (self.tools_panel, "Tools", "tools"),
             (self.donate_panel, "Apoiar", "heart"),
         )):
             self.pages.addWidget(page)
@@ -273,15 +276,10 @@ class MainWindow(QMainWindow):
         appearance = QFrame()
         appearance.setObjectName("appearanceControls")
         appearance_layout = QVBoxLayout(appearance)
-        appearance_layout.setContentsMargins(10, 12, 4, 0)
-        appearance_layout.setSpacing(8)
-        appearance_label = QLabel("APARÊNCIA")
-        appearance_label.setObjectName("appearanceLabel")
-        appearance_layout.addWidget(appearance_label)
-        self.theme_switch = ToggleCheckBox("Modo escuro")
-        self.theme_switch.setAccessibleName("Modo escuro")
+        appearance_layout.setContentsMargins(0, 10, 0, 0)
+        self.theme_switch = ThemeSwitch()
         self.theme_switch.toggled.connect(self._set_dark_theme)
-        appearance_layout.addWidget(self.theme_switch)
+        appearance_layout.addWidget(self.theme_switch, 0, Qt.AlignmentFlag.AlignLeft)
         navigation.addWidget(appearance)
         workspace_row.addWidget(sidebar)
         workspace_row.addWidget(self.pages, 1)
@@ -336,11 +334,12 @@ class MainWindow(QMainWindow):
             self.theme_switch.setChecked(not light)
             self.theme_switch.blockSignals(False)
             self.theme_switch._animate_to_state(not light)
+        self.theme_switch.setAccessibleName("Tema claro" if light else "Tema escuro")
         self.theme_switch.setToolTip("Ativar tema escuro" if light else "Ativar tema claro")
 
     def _update_navigation(self, index: int) -> None:
         for position, (button, symbol) in enumerate(zip(
-                self.navigation_buttons, ("monitor", "bell-ring", "heart"))):
+                self.navigation_buttons, ("monitor", "bell-ring", "tools", "heart"))):
             selected = position == index
             button.setChecked(selected)
             set_icon(button, symbol, role="ACCENT_LIGHT" if selected else "ICON", size=18)

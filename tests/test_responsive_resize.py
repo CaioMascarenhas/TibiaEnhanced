@@ -54,7 +54,7 @@ class ResponsiveResizeTests(unittest.TestCase):
         self.window.close()
 
     def test_resize_within_same_columns_does_not_remove_and_readd_cards(self):
-        for index in (0, 1, 2):
+        for index in (0, 1, 3):
             self.window.navigation_buttons[index].click()
             self.window.resize(940, 600)
             self.app.processEvents()
@@ -75,7 +75,7 @@ class ResponsiveResizeTests(unittest.TestCase):
         timer_card = self.window.audio_panel.cards[0]
         timer_card.timer.start()
         timer_card.volume.setValue(37)
-        for index in (0, 1, 2):
+        for index in (0, 1, 3):
             self.window.navigation_buttons[index].click()
             panel = self.window.pages.currentWidget()
             cards = (list(panel._cards.values()) if index == 0 else panel.cards
@@ -92,7 +92,7 @@ class ResponsiveResizeTests(unittest.TestCase):
                 if index < 2:
                     self.assertGreaterEqual(layout.parentWidget().minimumHeight(),
                                             max(card.geometry().bottom() + 1 for card in cards))
-                self.assertEqual((panel.scroll if index == 2 else panel.card_scroll)
+                self.assertEqual((panel.scroll if index == 3 else panel.card_scroll)
                                  .horizontalScrollBar().maximum(), 0)
         self.assertEqual(observer.hides, 0)
         self.assertIs(self.window.audio_panel.cards[0], timer_card)
