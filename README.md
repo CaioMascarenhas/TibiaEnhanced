@@ -69,6 +69,16 @@ Novos recortes usam **Preencher janela** como ajuste padrão. No menu de botão 
 
 O processo de geração do executável e os diagnósticos do pacote Windows estão em [docs/windows-build.md](docs/windows-build.md).
 
+## Tools
+
+Na seção **Tools**, use **Loot Split** para colar o log do Party Hunt Analyzer e obter o acerto
+igual de lucro e supplies, comandos exatos do banco para copiar, lucro por hora e Damage Split.
+**EXP Share** mostra a faixa de levels compatível. Ao lado do título Tools, o **Rashid** aparece
+com GIF e cidade do dia, considerando o server save. Passe o mouse para ver direções e horário
+da troca, ou clique na cidade para abrir o mapa. Consulte [as regras e exemplos](docs/tools.md).
+O switch de tema na parte inferior da navegação mostra apenas sol e lua, com indicador
+amarelo no claro e roxo no escuro. Funciona com clique ou Espaço quando está em foco.
+
 ## Referências
 
 - [Como funciona o TibiaVision](https://tibiavision.com/how-it-works)

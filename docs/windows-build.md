@@ -70,4 +70,23 @@ Após instalar o compilador Inno Setup e gerar o pacote:
 ISCC.exe packaging/installer.iss
 ```
 
+### Atualizar o instalador
+
+Depois de alterar o código, execute novamente os dois passos na raiz do projeto:
+
+```powershell
+./.venv-build/Scripts/python.exe tools/build_windows.py
+& "C:\Program Files\Inno Setup 7\ISCC.exe" packaging/installer.iss
+```
+
+O primeiro comando reconstrói o aplicativo, seus recursos e o ZIP. O segundo empacota a pasta
+recém-gerada em `dist/TibiaEnhanced-setup-test.exe`. Alterar o código ou gerar somente o ZIP
+não modifica um instalador já criado.
+
+Para atualizar uma instalação existente, feche o aplicativo e execute o novo setup na mesma
+pasta de instalação. O `AppId` permanece o mesmo, e os perfis ficam fora dessa pasta. Ainda
+não há busca automática de atualizações: o novo setup precisa ser distribuído e executado.
+Em versões publicadas, atualize também `AppVersion` em `packaging/installer.iss` e a versão em
+`pyproject.toml` antes do build; os pacotes de teste atuais continuam na versão `0.1.0`.
+
 A definição do instalador não equivale a uma instalação/desinstalação validada. Publicação, assinatura, revisão das licenças e regras e testes com o cliente real permanecem etapas separadas.

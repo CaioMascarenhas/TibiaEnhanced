@@ -50,7 +50,7 @@ def main() -> None:
     assert embedded_icons == source_icons, "O ícone do executável não corresponde ao ícone do app"
     pe.close()
     packages = {name: version(name) for name in
-                ("PyInstaller", "pyinstaller-hooks-contrib", "PySide6", "mss", "Pillow", "pefile")}
+                ("PyInstaller", "pyinstaller-hooks-contrib", "PySide6", "mss", "tzdata", "Pillow", "pefile")}
     files = [path for path in bundle.rglob("*") if path.is_file()]
     forbidden = {".git", ".venv", ".venv-build", ".vscode", "tests", "tools"}
     assert not any(forbidden.intersection(path.relative_to(bundle).parts) for path in files)

@@ -364,3 +364,41 @@ class ToggleCheckBox(QCheckBox):
         painter.setFont(self.font())
         painter.drawText(QRectF(46, 0, self.width() - 46, self.height()),
                          Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())
+
+
+class ThemeSwitch(ToggleCheckBox):
+    """Sol e lua com indicador deslizante; marcado corresponde ao tema escuro."""
+
+    LIGHT_COLOR = "#f2c94c"
+    DARK_COLOR = "#7c3aed"
+
+    def __init__(self, parent=None) -> None:
+        super().__init__("", parent)
+        self.setObjectName("themeSwitch")
+        self.setFixedSize(70, 36)
+
+    def sizeHint(self) -> QSize:
+        return QSize(70, 36)
+
+    def paintEvent(self, event) -> None:
+        colors = current_palette()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track = QRectF(3, (self.height() - 30) / 2, 64, 30)
+        painter.setPen(QPen(QColor(colors["ACCENT"] if self.hasFocus() else colors["BORDER"]), 1))
+        painter.setBrush(QColor(colors["SURFACE_HOVER"] if self.underMouse() else colors["INPUT"]))
+        painter.drawRoundedRect(track, 15, 15)
+        thumb = QRectF(track.left() + 2 + 32 * self._position, track.top() + 2, 28, 26)
+        painter.setPen(Qt.PenStyle.NoPen)
+        light, dark = QColor(self.LIGHT_COLOR), QColor(self.DARK_COLOR)
+        accent = QColor.fromRgb(*(
+            round(start + (end - start) * self._position)
+            for start, end in zip(light.getRgb()[:3], dark.getRgb()[:3])
+        ))
+        painter.setBrush(accent if self.isEnabled() else QColor(colors["DISABLED_TRACK"]))
+        painter.drawRoundedRect(thumb, 13, 13)
+        for name, x, active in (("sun", 12, not self.isChecked()), ("moon", 44, self.isChecked())):
+            color = ("#ffffff" if self.isChecked() else "#41320a") if active else colors["MUTED"]
+            if not self.isEnabled():
+                color = colors["DISABLED_TEXT"]
+            painter.drawPixmap(x, round(self.height() / 2 - 7), icon(name, color, 14).pixmap(14, 14))

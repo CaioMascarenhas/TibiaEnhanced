@@ -2,6 +2,7 @@ from pathlib import Path
 from importlib.metadata import distribution
 import sys
 import tomllib
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo, StringFileInfo, StringTable, StringStruct, VarFileInfo, VarStruct, VSVersionInfo,
 )
@@ -24,12 +25,13 @@ version_info = VSVersionInfo(
     ])]), VarFileInfo([VarStruct("Translation", [1033, 1200])])],
 )
 datas = []
+datas.extend(collect_data_files("tzdata"))
 for directory in ("audios", "imgs", "fonts", "icons"):
     for path in (assets / directory).rglob("*"):
         if path.is_file():
             datas.append((str(path), str(Path("tibiaenhanced") / path.parent.relative_to(assets))))
 datas.append((str(root / "packaging" / "README-windows.txt"), "."))
-for package in ("PySide6", "PySide6_Essentials", "PySide6_Addons", "shiboken6", "mss"):
+for package in ("PySide6", "PySide6_Essentials", "PySide6_Addons", "shiboken6", "mss", "tzdata"):
     package_info = distribution(package)
     for file in package_info.files or []:
         if "licenses" in file.parts or file.name.startswith("LICENSE"):
@@ -43,7 +45,7 @@ if python_license.is_file():
 a = Analysis(
     [str(root / "packaging" / "windows_entry.py")],
     pathex=[str(root / "src")],
-    binaries=[], datas=datas, hiddenimports=[], hookspath=[], runtime_hooks=[],
+    binaries=[], datas=datas, hiddenimports=collect_submodules("tzdata"), hookspath=[], runtime_hooks=[],
     excludes=["pytest", "unittest", "segno", "zxingcpp", "PIL", "pip"],
     noarchive=False,
 )
