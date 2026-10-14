@@ -1,11 +1,12 @@
-; Preparado para Inno Setup. O primeiro artefato validado é o ZIP portátil.
+; A versão é gerada por tools/build_windows.py a partir de pyproject.toml.
+#include "..\build\windows-version.iss"
 #define AppName "Tibia Enhanced"
-#define AppVersion "0.1.0"
 
 [Setup]
 AppId={{794F32CF-D26D-4E37-A80C-A499CE8A01C8}
 AppName={#AppName}
 AppVersion={#AppVersion}
+VersionInfoVersion={#AppNumericVersion}
 AppPublisher=Caio Mascarenhas
 DefaultDirName={localappdata}\Programs\{#AppName}
 PrivilegesRequired=lowest
@@ -15,7 +16,7 @@ MinVersion=10.0.19041
 SetupIconFile=..\build\TibiaEnhanced.ico
 UninstallDisplayIcon={app}\TibiaEnhanced.exe
 OutputDir=..\dist
-OutputBaseFilename=TibiaEnhanced-setup-test
+OutputBaseFilename=TibiaEnhanced-{#AppVersion}-windows-x64-setup
 Compression=lzma2
 SolidCompression=yes
 

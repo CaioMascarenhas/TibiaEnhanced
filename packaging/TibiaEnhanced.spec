@@ -2,6 +2,7 @@ from pathlib import Path
 from importlib.metadata import distribution
 import sys
 import tomllib
+from packaging.version import Version
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo, StringFileInfo, StringTable, StringStruct, VarFileInfo, VarStruct, VSVersionInfo,
@@ -10,7 +11,8 @@ from PyInstaller.utils.win32.versioninfo import (
 root = Path(SPECPATH).parent
 assets = root / "src" / "tibiaenhanced"
 app_version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-version_numbers = tuple(int(part) for part in app_version.split(".")) + (0,)
+release_numbers = Version(app_version).release
+version_numbers = (release_numbers + (0, 0, 0, 0))[:4]
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(filevers=version_numbers, prodvers=version_numbers, mask=0x3f,
                       flags=0, OS=0x40004, fileType=1, subtype=0, date=(0, 0)),

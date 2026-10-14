@@ -8,10 +8,12 @@ import platform
 import subprocess
 import struct
 import sys
+import tomllib
 import zipfile
 
 from PIL import Image
 import pefile
+from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +23,13 @@ def main() -> None:
         raise SystemExit("Execute o build no Windows x64.")
     build = ROOT / "build"
     build.mkdir(exist_ok=True)
+    app_version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    parsed_version = Version(app_version)
+    numeric_version = ".".join(str(part) for part in (parsed_version.release + (0, 0, 0, 0))[:4])
+    (build / "windows-version.iss").write_text(
+        f'#define AppVersion "{app_version}"\n#define AppNumericVersion "{numeric_version}"\n',
+        encoding="utf-8",
+    )
     with Image.open(ROOT / "src" / "tibiaenhanced" / "imgs" / "iconapp_no_bg.png") as image:
         image.save(build / "TibiaEnhanced.ico", format="ICO",
                    sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
@@ -56,6 +65,7 @@ def main() -> None:
     assert not any(forbidden.intersection(path.relative_to(bundle).parts) for path in files)
     assert not any(path.name == "profiles.json" or path.name.startswith(".env") for path in files)
     manifest = {
+        "version": app_version, "channel": "beta" if parsed_version.is_prerelease else "stable",
         "python": platform.python_version(), "architecture": platform.machine(),
         "packages": packages, "icon_sizes": icon_sizes, "files": len(files),
         "bytes": sum(path.stat().st_size for path in files),
@@ -65,7 +75,7 @@ def main() -> None:
                                                            cwd=ROOT, text=True).strip()),
     }
     (build / "windows-build.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    archive = ROOT / "dist" / "TibiaEnhanced-windows-x64-test.zip"
+    archive = ROOT / "dist" / f"TibiaEnhanced-{app_version}-windows-x64-portable.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
         for path in files:
             zip_file.write(path, path.relative_to(bundle.parent))
