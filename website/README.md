@@ -42,6 +42,48 @@ Para atualizar os downloads, publique uma release no GitHub e anexe os pacotes c
 
 ## Hospedar
 
+### Docker na VPS
+
+O GitHub Actions gera e publica `ghcr.io/caiomascarenhas/tibiaenhanced-web:latest` quando há alterações em `website/` na `main`. A imagem suporta Linux amd64 e arm64 e também recebe uma tag imutável `sha-<commit>`. PRs validam o build sem publicar; a execução manual fica na aba Actions.
+
+Com Docker Engine e Docker Compose instalados, execute dentro de `website/` na VPS:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+O Compose baixa a imagem pronta. A VPS não compila o projeto nem precisa de Node ou Python. O contêiner serve o site estático com Nginx na porta interna **8787**, com verificação de saúde; não publica portas no host.
+
+No **Nginx Proxy Manager**, adicione um Proxy Host:
+
+- Scheme: `http`.
+- Forward Hostname / IP: `tibiaenhanced-web`.
+- Forward Port: `8787`.
+- Configure seu domínio e certificado SSL no próprio Nginx Proxy Manager.
+
+Os dois serviços precisam estar conectados à mesma rede Docker externa. Por padrão, o Compose usa `proxy`. Se sua rede tiver outro nome:
+
+```bash
+PROXY_NETWORK=nome-da-rede docker compose up -d
+```
+
+Para manter esse ajuste entre comandos, configure `PROXY_NETWORK` em um arquivo `.env` ao lado do Compose. O site deve ser servido na raiz do domínio.
+
+O GHCR cria novos pacotes como privados por padrão. Para download sem autenticação, o proprietário pode tornar o pacote público nas configurações de Packages do GitHub. Se permanecer privado, faça `docker login ghcr.io -u SEU_USUARIO` na VPS e informe um token com `read:packages` no campo de senha. O workflow usa o `GITHUB_TOKEN` fornecido pelo GitHub para publicar, sem segredo adicional no repositório.
+
+Para atualizar a VPS depois de uma publicação bem-sucedida da Action:
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+Use `git pull --ff-only` quando precisar atualizar o próprio Compose. Para fixar ou voltar a uma imagem específica, configure `IMAGE_TAG=sha-<commit>` no `.env`. Os downloads continuam sendo consultados diretamente no GitHub pelo navegador, sem reconstruir a imagem a cada release do aplicativo.
+
+### Outros hosts estáticos
+
 Publique o **conteúdo** de `website/out/` em um host estático. Também funciona com hosts que executam `npm ci && npm run build` na pasta `website` e publicam `out`.
 
 Para GitHub Pages em um subdiretório, configure o caminho **durante o build**:
