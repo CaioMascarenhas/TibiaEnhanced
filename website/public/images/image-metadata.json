@@ -1,0 +1,26 @@
+{
+  "app-recortes": {
+    "width": 940,
+    "height": 700
+  },
+  "app-light": {
+    "width": 940,
+    "height": 700
+  },
+  "app-editor": {
+    "width": 397,
+    "height": 533
+  },
+  "app-alertas": {
+    "width": 940,
+    "height": 700
+  },
+  "app-tools": {
+    "width": 940,
+    "height": 700
+  },
+  "app-share": {
+    "width": 940,
+    "height": 700
+  }
+}

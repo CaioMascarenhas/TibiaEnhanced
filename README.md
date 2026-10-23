@@ -1,6 +1,8 @@
 # Tibia Enhanced
 
-**Beta · Windows x64 · Gratuito**
+O frontend do site fica em [`website/`](website/README.md): Next.js, shadcn/ui, capturas reais do app e downloads conectados aos releases do GitHub. O build é estático e não exige backend ou banco de dados.
+
+**Versão 1.0.0 · Windows x64 · Gratuito**
 
 Tibia Enhanced é um aplicativo desktop para organizar informações e lembretes durante suas hunts no Tibia. Ele permite espelhar partes da janela do jogo em janelas flutuantes, criar alertas sonoros e usar ferramentas de divisão de loot e EXP Share.
 
@@ -8,18 +10,18 @@ O aplicativo funciona localmente e salva suas configurações por perfil. Não �
 
 ## Download e instalação
 
-Os pacotes publicados ficam nas [Releases do GitHub](https://github.com/CaioMascarenhas/tibiaenhanced/releases). A versão atual do projeto é **0.1.0-beta.1**; no GitHub, versões beta devem estar marcadas como **Pre-release**.
+Os pacotes publicados ficam nas [Releases do GitHub](https://github.com/CaioMascarenhas/tibiaenhanced/releases). A primeira versão estável do projeto é **1.0.0**.
 
 Escolha o formato que preferir:
 
 | Pacote | Como usar |
 | --- | --- |
-| `TibiaEnhanced-0.1.0-beta.1-windows-x64-setup.exe` | Execute o instalador e abra o aplicativo pelo atalho criado. A instalação é por usuário e não exige administrador. |
-| `TibiaEnhanced-0.1.0-beta.1-windows-x64-portable.zip` | Extraia o ZIP inteiro e abra `TibiaEnhanced.exe` dentro da pasta extraída. Mantenha `_internal` ao lado do executável. |
+| `TibiaEnhanced-1.0.0-windows-x64-setup.exe` | Execute o instalador e abra o aplicativo pelo atalho criado. A instalação é por usuário e não exige administrador. |
+| `TibiaEnhanced-1.0.0-windows-x64-portable.zip` | Extraia o ZIP inteiro e abra `TibiaEnhanced.exe` dentro da pasta extraída. Mantenha `_internal` ao lado do executável. |
 
 Os nomes acima identificam os pacotes gerados pelo projeto; confira na página de Releases quais versões já foram publicadas. O arquivo **Source code** oferecido pelo GitHub contém o código-fonte, e não o aplicativo pronto para usar.
 
-O alvo de distribuição é Windows 10 (build 19041 ou superior) e Windows 11, em x64. Por ser beta, a compatibilidade com Windows 11, diferentes escalas de tela e múltiplos monitores ainda está em validação. Consulte os [resultados e limitações dos testes](docs/windows-build.md).
+O alvo de distribuição é Windows 10 (build 19041 ou superior) e Windows 11, em x64. A compatibilidade com Windows 11, diferentes escalas de tela e múltiplos monitores continua em validação. Consulte os [resultados e limitações dos testes](docs/windows-build.md).
 
 ## Recortes da janela do jogo
 
@@ -64,7 +66,7 @@ O controle de sol e lua na barra lateral alterna entre os temas claro e escuro. 
 
 ## Atualização e remoção
 
-As atualizações são **manuais nesta beta**. Baixe o novo pacote nas Releases e feche o aplicativo antes de atualizar:
+As atualizações são **manuais**. Baixe o novo pacote nas Releases e feche o aplicativo antes de atualizar:
 
 - **Instalador:** execute o novo setup na mesma pasta da instalação existente.
 - **Portátil:** extraia o novo ZIP em uma pasta separada e abra a nova versão.
