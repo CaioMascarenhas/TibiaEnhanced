@@ -1,7 +1,4 @@
 # Tibia Enhanced
-
-O frontend do site fica em [`website/`](website/README.md): Next.js, shadcn/ui, capturas reais do app e downloads conectados aos releases do GitHub. O build é estático e não exige backend ou banco de dados.
-
 **Versão 1.0.0 · Windows x64 · Gratuito**
 
 Tibia Enhanced é um aplicativo desktop para organizar informações e lembretes durante suas hunts no Tibia. Ele permite espelhar partes da janela do jogo em janelas flutuantes, criar alertas sonoros e usar ferramentas de divisão de loot e EXP Share.
