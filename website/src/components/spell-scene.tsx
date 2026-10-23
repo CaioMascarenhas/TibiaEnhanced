@@ -12,15 +12,18 @@ export function SpellScene({
   scale = 100,
   locked = true,
   visible = true,
+  priority = false,
 }: {
   opacity?: number;
   scale?: number;
   locked?: boolean;
   visible?: boolean;
+  priority?: boolean;
 }) {
   return (
     <div className="spell-scene">
       <Image
+        priority={priority}
         className="spell-background"
         src={asset("/images/tibia-spells-background.webp")}
         alt="Personagem no Tibia, com espaço ao redor para centralizar os recortes de magias"

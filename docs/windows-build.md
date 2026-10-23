@@ -1,6 +1,6 @@
-# Build beta para Windows x64
+# Build para Windows x64
 
-O build usa PyInstaller em modo pasta, com Python e bibliotecas embarcados. O usuário extrai o ZIP inteiro e abre `TibiaEnhanced.exe`; a pasta `_internal` precisa permanecer ao lado dele. A versão atual é `0.1.0-beta.1`, destinada à validação como beta, sem publicação automática.
+O build usa PyInstaller em modo pasta, com Python e bibliotecas embarcados. O usuário extrai o ZIP inteiro e abre `TibiaEnhanced.exe`; a pasta `_internal` precisa permanecer ao lado dele. A versão atual é `1.0.0`, a primeira versão estável. A publicação no GitHub é manual, após validar os pacotes.
 
 ## Gerar
 
@@ -15,7 +15,7 @@ python -m venv .venv-build
 Saídas:
 
 - `dist/TibiaEnhanced/TibiaEnhanced.exe`: executável de GUI, sem console.
-- `dist/TibiaEnhanced-0.1.0-beta.1-windows-x64-portable.zip`: pasta completa para uso portátil.
+- `dist/TibiaEnhanced-1.0.0-windows-x64-portable.zip`: pasta completa para uso portátil.
 - `build/windows-version.iss`: versão gerada de `pyproject.toml`, usada pelo instalador.
 - `build/TibiaEnhanced.ico`: ícone gerado do PNG original do projeto em 16, 24, 32, 48, 64, 128 e 256 pixels; reutilizado pelo instalador.
 - `build/windows-build.json`: versão do aplicativo, canal beta/estável, versões de ferramentas, commit de origem, estado do código, tamanho, SHA-256 e tamanhos de ícone.
@@ -98,7 +98,7 @@ Depois de alterar o código, execute novamente os dois passos na raiz do projeto
 ```
 
 O primeiro comando reconstrói o aplicativo, seus recursos e o ZIP. O segundo empacota a pasta
-recém-gerada em `dist/TibiaEnhanced-0.1.0-beta.1-windows-x64-setup.exe`. Alterar o código ou gerar somente o ZIP
+recém-gerada em `dist/TibiaEnhanced-1.0.0-windows-x64-setup.exe`. Alterar o código ou gerar somente o ZIP
 não modifica um instalador já criado.
 
 Para atualizar uma instalação existente, feche o aplicativo e execute o novo setup na mesma
@@ -106,12 +106,18 @@ pasta de instalação. O `AppId` permanece o mesmo, e os perfis ficam fora dessa
 não há busca automática de atualizações: o novo setup precisa ser distribuído e executado.
 Para mudar a versão, atualize somente `project.version` em `pyproject.toml` antes do build.
 O executável, o nome do ZIP e a configuração do instalador usam essa mesma origem.
-O sufixo beta aparece na versão textual; os recursos numéricos do Windows usam `0.1.0.0`.
-O histórico acima descreve o pacote anterior de teste, não certifica o novo build beta.
+Os recursos numéricos do Windows usam `1.0.0.0`, e a versão textual usa `1.0.0`.
+O histórico acima descreve pacotes anteriores de teste; cada novo build precisa de sua própria validação.
 
 A definição do instalador não equivale a uma instalação/desinstalação validada. Publicação, assinatura, revisão das licenças e regras e testes com o cliente real permanecem etapas separadas.
 
-## Release beta no GitHub
+## Release estável no GitHub
+
+Use a tag `v1.0.0`, o título **Tibia Enhanced 1.0.0**, sem marcar **Pre-release**, e publique como a versão mais recente. O texto está em [releases/1.0.0.md](releases/1.0.0.md).
+
+Gere o executável e o instalador a partir do commit da `main` correspondente à tag. Valide os pacotes e anexe o instalador, o ZIP portátil e `SHA256SUMS.txt` antes de publicar. Preserve releases anteriores no histórico.
+
+### Histórico da release beta
 
 Use a tag `v0.1.0-beta.1`, o título **Tibia Enhanced 0.1.0 Beta 1** e marque **Pre-release**.
 Anexe o instalador e o ZIP portátil versionados; não distribua o executável interno isoladamente.

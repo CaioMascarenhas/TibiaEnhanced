@@ -306,14 +306,6 @@
   box-shadow: 0 0 0 3px #96cba70b;
   flex-shrink: 0;
 }
-.badge-beta {
-  font-size: 9px;
-  color: var(--blue);
-  background: var(--secondary);
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.8px;
-}
 .hero h1 {
   font-size: clamp(56px, 5.8vw, 80px);
   line-height: 1.04;
@@ -393,12 +385,12 @@ h2 span,
   margin-left: 20px;
 }
 .hero-game {
+  position: relative;
   border: 1px solid #4a5361;
   border-radius: 12px;
   background: #232730;
   overflow: hidden;
   box-shadow: var(--shadow);
-  transform: rotate(-2deg);
   margin: 0 12px 0 20px;
 }
 .hero-game > img {

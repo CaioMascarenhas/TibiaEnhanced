@@ -74,7 +74,7 @@ export default function DownloadPage() {
       <div className="compatibility">
         <h3>Sobre esta versão</h3>
         <p>
-          O projeto está em beta. Windows 10 build 19041 ou superior e Windows
+          Versão 1.0.0. Windows 10 build 19041 ou superior e Windows
           11, em x64, são os alvos de distribuição. Diferentes escalas e
           configurações de monitores continuam em validação.
         </p>

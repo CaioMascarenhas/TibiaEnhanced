@@ -11,7 +11,6 @@ import {
   CodeXml,
   Layers,
   Monitor,
-  MousePointer2,
   SlidersHorizontal,
   Sparkles,
   Swords,
@@ -21,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { OverlayDemo } from "@/components/overlay-demo";
+import { SpellScene } from "@/components/spell-scene";
 import { FAQ } from "@/components/faq";
 import { asset, REPOSITORY } from "@/lib/site";
 
@@ -30,8 +30,7 @@ export default function Home() {
       <section className="hero container">
         <div className="hero-copy">
           <Badge variant="outline" className="hero-badge">
-            <span className="live-dot" /> FEITO PARA QUEM JOGA TIBIA{" "}
-            <span className="badge-beta">BETA</span>
+            <span className="live-dot" /> FEITO PARA QUEM JOGA TIBIA
           </Badge>
           <h1>
             Sua hunt.
@@ -86,46 +85,10 @@ export default function Home() {
                 <Monitor size={12} />
               </span>
             </div>
-            <Image
-              priority
-              src={asset("/images/tibia-world.webp")}
-              width={1021}
-              height={752}
-              alt="Mascarenhass no Tibia, em uma ilha com barras de vida e mana ao redor do personagem"
-            />
+            <SpellScene priority />
             <div className="game-label">
               <span>CAPTURA REAL DO JOGO</span>
-              <span>
-                via OBS <span className="live-dot" />
-              </span>
             </div>
-          </div>
-          <div className="floating-vitals">
-            <div className="floating-title">
-              <Crop size={13} />
-              <span>Vida e mana</span>
-              <span className="float-dots">···</span>
-            </div>
-            <Image
-              priority
-              src={asset("/images/tibia-vitals.webp")}
-              width={1199}
-              height={48}
-              alt="Recorte das barras de vida e mana, separado da área original"
-            />
-            <span className="resize-corner" />
-          </div>
-          <div className="floating-skills">
-            <div className="floating-title">
-              <Layers size={13} />
-              Skills <MousePointer2 size={13} />
-            </div>
-            <Image
-              src={asset("/images/tibia-skills.webp")}
-              width={178}
-              height={184}
-              alt="Recorte da janela de Skills do Tibia"
-            />
           </div>
           <div className="hero-chip">
             <SlidersHorizontal size={16} />

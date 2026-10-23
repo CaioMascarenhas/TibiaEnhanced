@@ -158,7 +158,7 @@ export function OverlayDemo() {
             </div>
             <p className="small-note">
               {example === "spells" &&
-                "Os ícones de caveira, espiral e fogo vêm da barra de ações. "}
+                "As magias e runas vêm da barra de ações. "}
               No app, arraste para posicionar e use as bordas para
               redimensionar. O bloqueio deixa os cliques passarem para a janela
               abaixo.
