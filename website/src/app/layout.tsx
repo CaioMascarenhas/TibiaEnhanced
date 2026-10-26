@@ -25,6 +25,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7308349546540862"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
