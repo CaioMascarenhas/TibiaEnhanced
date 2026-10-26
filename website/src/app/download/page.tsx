@@ -33,6 +33,19 @@ export default function DownloadPage() {
         </div>
       </div>
       <Downloads />
+      <aside className="compatibility" aria-labelledby="unsigned-app-title">
+        <h3 id="unsigned-app-title">Aviso ao abrir o instalador</h3>
+        <p>
+          O Tibia Enhanced ainda não possui assinatura digital. Por isso, o
+          Windows ou o navegador pode exibir um alerta de possível perigo,
+          aplicativo não reconhecido ou editor desconhecido ao baixar ou executar
+          o instalador.
+        </p>
+        <p>
+          Baixe pelos links desta página, que apontam para os Releases oficiais
+          do projeto no GitHub.
+        </p>
+      </aside>
       <section className="install-guide">
         <div>
           <span className="eyebrow">DO DOWNLOAD À HUNT</span>

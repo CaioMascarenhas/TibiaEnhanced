@@ -156,7 +156,7 @@
     height: auto;
   }
   section[id] {
-    scroll-margin-top: 80px;
+    scroll-margin-top: 0;
   }
 }
 .container {

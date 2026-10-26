@@ -65,15 +65,15 @@ export function Header() {
           className={`nav-links ${open ? "is-open" : ""}`}
           aria-label="Navegação principal"
         >
-          <Link href="/#recursos" onClick={() => setOpen(false)}>
+          <a href={asset("/#recursos")} onClick={() => setOpen(false)}>
             Recursos
-          </Link>
-          <Link href="/#como-funciona" onClick={() => setOpen(false)}>
+          </a>
+          <a href={asset("/#como-funciona")} onClick={() => setOpen(false)}>
             Como funciona
-          </Link>
-          <Link href="/#galeria" onClick={() => setOpen(false)}>
+          </a>
+          <a href={asset("/#galeria")} onClick={() => setOpen(false)}>
             O aplicativo
-          </Link>
+          </a>
           <Link
             href="/download/"
             className={pathname.startsWith("/download") ? "active-link" : ""}
