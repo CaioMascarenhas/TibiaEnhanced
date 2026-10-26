@@ -87,7 +87,7 @@ export default function Home() {
               </span>
             </div>
             <SpellScene priority />
-            <div className="game-label">
+            <div className="game-label" style={{ justifyContent: "flex-end" }}>
               <span>CAPTURA REAL DO JOGO</span>
             </div>
           </div>
