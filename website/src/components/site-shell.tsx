@@ -14,7 +14,9 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "radix-ui";
 import { asset, REPOSITORY } from "@/lib/site";
+import "./repository-tooltip.css";
 
 export function Brand() {
   return (
@@ -83,15 +85,39 @@ export function Header() {
           </Link>
         </nav>
         <div className="nav-actions">
-          <a
-            className="icon-link github-nav"
-            href={REPOSITORY}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Código no GitHub"
-          >
-            <CodeXml size={19} />
-          </a>
+          <Tooltip.Provider delayDuration={200}>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <a
+                  className="icon-link github-nav"
+                  href={REPOSITORY}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Repositório do GitHub"
+                >
+                  <CodeXml size={19} />
+                </a>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  className="repository-tooltip"
+                  side="bottom"
+                  sideOffset={12}
+                  collisionPadding={16}
+                >
+                  <span className="repository-tooltip-icon" aria-hidden="true">
+                    <CodeXml size={19} />
+                  </span>
+                  <span className="repository-tooltip-copy">
+                    <strong>Repositório do GitHub</strong>
+                    <span>Explore o código do projeto</span>
+                  </span>
+                  <ArrowUpRight size={14} aria-hidden="true" />
+                  <Tooltip.Arrow className="repository-tooltip-arrow" width={12} height={6} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </Tooltip.Provider>
           <button
             className="theme-switch"
             onClick={toggleTheme}
