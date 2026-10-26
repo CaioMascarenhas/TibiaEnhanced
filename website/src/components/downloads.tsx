@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedCardGrid } from "@/components/animated-card-grid";
 import {
   formatSize,
   getPackage,
@@ -118,7 +119,7 @@ export function Downloads() {
               </select>
             </label>
           </div>
-          <div className="download-grid">
+          <AnimatedCardGrid className="download-grid">
             {(["installer", "portable"] as const).map((format) => {
               const file = getPackage(release, format);
               const installer = format === "installer";
@@ -191,7 +192,7 @@ export function Downloads() {
                 </article>
               );
             })}
-          </div>
+          </AnimatedCardGrid>
           <a
             className="text-link release-notes"
             href={release.html_url}

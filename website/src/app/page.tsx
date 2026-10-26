@@ -22,6 +22,7 @@ import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { OverlayDemo } from "@/components/overlay-demo";
 import { SpellScene } from "@/components/spell-scene";
 import { FAQ } from "@/components/faq";
+import { AnimatedCardGrid } from "@/components/animated-card-grid";
 import { asset, REPOSITORY } from "@/lib/site";
 
 export default function Home() {
@@ -135,7 +136,7 @@ export default function Home() {
             hunt.
           </p>
         </div>
-        <div className="feature-grid">
+        <AnimatedCardGrid className="feature-grid">
           <article className="feature-large">
             <div className="feature-icon">
               <Crop size={23} />
@@ -207,7 +208,7 @@ export default function Home() {
               <ArrowUpRight size={18} />
             </div>
           </article>
-        </div>
+        </AnimatedCardGrid>
       </section>
       <section id="como-funciona" className="section demo-section">
         <div className="container">
